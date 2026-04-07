@@ -1,30 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For You 💖</title>
 
-    <style>
-        body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #111;
-            color: #fff;
-            font-family: Arial, sans-serif;
-        }
+<style>
+    body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+        font-family: 'Segoe UI', sans-serif;
+        overflow: hidden;
+    }
 
-        h1 {
-            font-size: 60px;
-        }
-    </style>
+    .container {
+        text-align: center;
+    }
+
+    /* Envelope */
+    .envelope {
+        width: 200px;
+        height: 130px;
+        background: #fff;
+        position: relative;
+        margin: auto;
+        border-radius: 10px;
+        cursor: pointer;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        transition: transform 0.3s;
+    }
+
+    .envelope:hover {
+        transform: scale(1.05);
+    }
+
+    /* Flap */
+    .flap {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #ff6f91;
+        clip-path: polygon(0 0, 100% 0, 50% 60%);
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        transition: 0.5s;
+        z-index: 2;
+    }
+
+    /* Label */
+    .label {
+        margin-top: 15px;
+        color: white;
+        font-size: 16px;
+        opacity: 0.9;
+    }
+
+    /* Letter */
+    .letter {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        width: 300px;
+        padding: 25px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        text-align: center;
+        transition: 0.4s ease;
+        z-index: 10;
+    }
+
+    .letter h2 {
+        margin: 0;
+        color: #ff6f91;
+    }
+
+    .letter p {
+        margin-top: 10px;
+        font-size: 18px;
+    }
+
+    .letter.show {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Overlay */
+    .overlay {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.4);
+        top: 0;
+        left: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.3s;
+    }
+
+    .overlay.show {
+        opacity: 1;
+        pointer-events: all;
+    }
+</style>
 </head>
+
 <body>
 
-    <h1>Hello World 🌍</h1>
+<div class="container">
+    <div class="envelope" onclick="openLetter()">
+        <div class="flap"></div>
+    </div>
+    <div class="label">💌 Click the envelope to open</div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeLetter()"></div>
+
+<div class="letter" id="letter">
+    <h2> Hi 💖</h2>
+    <p>I miss you 😎</p>
+</div>
+
+<script>
+function openLetter() {
+    document.getElementById("letter").classList.add("show");
+    document.getElementById("overlay").classList.add("show");
+}
+
+function closeLetter() {
+    document.getElementById("letter").classList.remove("show");
+    document.getElementById("overlay").classList.remove("show");
+}
+</script>
 
 </body>
 </html>
