@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pump Control</title>
+
+<style>
+  body {
+    font-family: Arial;
+    text-align: center;
+    background: #f4f4f4;
+    padding: 20px;
+  }
+
+  h2 {
+    margin-bottom: 10px;
+  }
+
+  .section {
+    margin: 20px 0;
+  }
+
+  button {
+    padding: 12px 20px;
+    margin: 5px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #3498db;
+    color: white;
+  }
+
+  button:hover {
+    background: #2980b9;
+  }
+
+  .active {
+    background: #2ecc71 !important;
+  }
+
+  #status {
+    margin-top: 20px;
+    font-weight: bold;
+  }
+</style>
+</head>
+
+<body>
+
+<h2>🧪 Pump Control Panel</h2>
+
+<!-- Pump Selection -->
+<div class="section">
+  <h3>Select Pump</h3>
+  <button onclick="selectPump(9)">Pump 1 (ID 9)</button>
+  <button onclick="selectPump(10)">Pump 2 (ID 10)</button>
+  <button onclick="selectPump(11)">Pump 3 (ID 11)</button>
+</div>
+
+<!-- Revolutions -->
+<div class="section">
+  <h3>Select Revolutions</h3>
+  <div id="revolutionButtons"></div>
+</div>
+
+<!-- Send -->
+<div class="section">
+  <button onclick="sendCommand()" style="background:#e67e22;">SEND COMMAND</button>
+</div>
+
+<div id="status">Status: Not connected</div>
+
+<script>
+
+// ================= CONFIG =================
+const wsUrl = "wss://app.labavendo.com/cable"; // same as master
+const masterId = "C700";
+
+// ================= STATE =================
+let selectedPump = null;
+let selectedRevolution = null;
+let socket;
+
+// ================= INIT =================
+
+// Create revolution buttons (1–10)
+const revContainer = document.getElementById("revolutionButtons");
+for (let i = 1; i <= 10; i++) {
+  let btn = document.createElement("button");
+  btn.innerText = i + " Rev";
+  btn.onclick = () => selectRevolution(i, btn);
+  revContainer.appendChild(btn);
+}
+
+// ================= WEBSOCKET =================
+function connectWS() {
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = () => {
+    document.getElementById("status").innerText = "Status: Connected";
+    console.log("WebSocket connected");
+
+    // Subscribe like your master
+    let subscribeMsg = {
+      command: "subscribe",
+      identifier: JSON.stringify({
+        channel: "DirectMachineChannel",
+        name: masterId
+      })
+    };
+
+    socket.send(JSON.stringify(subscribeMsg));
+  };
+
+  socket.onmessage = (event) => {
+    console.log("WS RX:", event.data);
+  };
+
+  socket.onclose = () => {
+    document.getElementById("status").innerText = "Status: Disconnected";
+    console.log("WebSocket disconnected");
+    setTimeout(connectWS, 3000); // auto reconnect
+  };
+
+  socket.onerror = (err) => {
+    console.error("WebSocket error:", err);
+  };
+}
+
+// ================= UI =================
+function selectPump(id) {
+  selectedPump = id;
+
+  document.querySelectorAll(".section button").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  event.target.classList.add("active");
+
+  console.log("Selected Pump:", id);
+}
+
+function selectRevolution(value, btn) {
+  selectedRevolution = value;
+
+  document.querySelectorAll("#revolutionButtons button").forEach(b => {
+    b.classList.remove("active");
+  });
+
+  btn.classList.add("active");
+
+  console.log("Selected Revolution:", value);
+}
+
+// ================= COMMAND =================
+function generateTrackingId() {
+  return Date.now(); // simple unique ID
+}
+
+function sendCommand() {
+
+  if (!selectedPump || !selectedRevolution) {
+    alert("Select pump and revolution first!");
+    return;
+  }
+
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    alert("WebSocket not connected!");
+    return;
+  }
+
+  let trackingId = generateTrackingId();
+
+  let content = `PulseC ${selectedPump} ${selectedRevolution} ${trackingId}`;
+
+  let payload = {
+    command: "message",
+    identifier: JSON.stringify({
+      channel: "DirectMachineChannel",
+      name: masterId
+    }),
+    data: JSON.stringify({
+      action: "message",
+      source: "web",
+      device_id: masterId,
+      content: content
+    })
+  };
+
+  socket.send(JSON.stringify(payload));
+
+  console.log("Sent:", content);
+  alert("Command Sent:\n" + content);
+}
+
+// ================= START =================
+connectWS();
+
+</script>
+
+</body>
+</html>
