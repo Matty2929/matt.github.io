@@ -49,7 +49,6 @@
     color: white;
     font-size: 16px;
     cursor: pointer;
-    transition: 0.2s;
   }
 
   .pump-buttons button:hover {
@@ -73,11 +72,40 @@
     background: #374151;
     color: white;
     cursor: pointer;
-    transition: 0.2s;
   }
 
   .grid button:hover {
     background: #4b5563;
+  }
+
+  /* NEW: side-by-side buttons */
+  .row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .priming-btn, .flush-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .priming-btn {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+  }
+
+  .flush-btn {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+  }
+
+  .priming-btn:hover,
+  .flush-btn:hover {
+    transform: scale(1.05);
   }
 
   .send-btn {
@@ -89,7 +117,7 @@
     color: white;
     font-size: 16px;
     cursor: pointer;
-    transition: 0.2s;
+    margin-top: 10px;
   }
 
   .send-btn:hover {
@@ -126,6 +154,15 @@
       <button onclick="selectPump(9, this)">Pump 1</button>
       <button onclick="selectPump(10, this)">Pump 2</button>
       <button onclick="selectPump(11, this)">Pump 3</button>
+    </div>
+  </div>
+
+  <!-- Priming + Flush -->
+  <div class="section">
+    <h3>Quick Actions</h3>
+    <div class="row">
+      <button class="priming-btn" onclick="sendPriming()">⚡ Priming</button>
+      <button class="flush-btn" onclick="sendFlush()">💧 Flush</button>
     </div>
   </div>
 
@@ -182,10 +219,6 @@ function connectWS() {
     socket.send(JSON.stringify(subscribeMsg));
   };
 
-  socket.onmessage = (event) => {
-    console.log("WS RX:", event.data);
-  };
-
   socket.onclose = () => {
     setStatus("🔴 Disconnected");
     setTimeout(connectWS, 3000);
@@ -232,11 +265,31 @@ function generateTrackingId() {
 }
 
 function sendCommand() {
-
   if (!selectedPump || !selectedRevolution) {
     alert("Select pump and revolution first!");
     return;
   }
+  sendPulse(selectedRevolution);
+}
+
+function sendPriming() {
+  if (!selectedPump) {
+    alert("Select pump first!");
+    return;
+  }
+  sendPulse(3);
+}
+
+// 🔥 NEW: Flush (10 revolutions)
+function sendFlush() {
+  if (!selectedPump) {
+    alert("Select pump first!");
+    return;
+  }
+  sendPulse(10);
+}
+
+function sendPulse(pulses) {
 
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     alert("WebSocket not connected!");
@@ -244,8 +297,7 @@ function sendCommand() {
   }
 
   let trackingId = generateTrackingId();
-
-  let content = `PulseC ${selectedPump} ${selectedRevolution} ${trackingId}`;
+  let content = `PulseC ${selectedPump} ${pulses} ${trackingId}`;
 
   let payload = {
     command: "message",
