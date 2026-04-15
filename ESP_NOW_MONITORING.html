@@ -25,6 +25,10 @@ body{
     font-family:Segoe UI, sans-serif;
     background:linear-gradient(135deg,#0b1220,#0f172a);
     color:var(--text);
+
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
 }
 
 header{
@@ -50,6 +54,7 @@ select{
 
 .container{
     padding:10px;
+    flex:1; 
 }
 
 .branch-card{
@@ -104,8 +109,6 @@ button{
     cursor:pointer;
 }
 
-button:hover{opacity:.85}
-
 .light{background:var(--green);color:#fff}
 .medium{background:var(--orange);color:#fff}
 .heavy{background:var(--red);color:#fff}
@@ -113,9 +116,38 @@ button:hover{opacity:.85}
 .topup{background:var(--purple);color:#fff}
 
 .status{
-    font-size:10px;
-    color:var(--muted);
+    font-size:11px;
     margin-top:6px;
+    color:var(--muted);
+}
+
+.logs-container{
+    background:var(--card);
+    padding:10px;
+    margin-top:auto; 
+    border-top:1px solid #1f2a44;
+}
+
+.logs-title{
+    font-size:13px;
+    font-weight:700;
+    margin-bottom:8px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:11px;
+}
+
+th,td{
+    padding:6px;
+    border-bottom:1px solid #1f2a44;
+    text-align:left;
+}
+
+th{
+    color:var(--muted);
 }
 </style>
 </head>
@@ -132,11 +164,27 @@ button:hover{opacity:.85}
 
 <div class="container" id="machineGrid"></div>
 
+<div class="logs-container">
+    <div class="logs-title">📜 SYSTEM LOGS</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Branch</th>
+                <th>Machine</th>
+                <th>Track</th>
+                <th>Command</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="logsBody"></tbody>
+    </table>
+</div>
+
 <script>
 
 const WS_URL = "wss://app.labavendo.com/cable";
 
-/* ================= BRANCHES ================= */
 const branches = {
 "QK016 QK Aguirre 2 Parañaque NCR":{master_id:"C403",washers:11,dryers:8},
 "QK001 QK Alabang Hills Muntinlupa NCR":{master_id:"C406",washers:13,dryers:12},
@@ -156,58 +204,127 @@ const branches = {
 };
 
 let socket;
-let activeBranch = null;
+let cardMap = {};
+let logMap = {};
 
-/* ================= WEBSOCKET ================= */
+function logWS(...args){
+    console.log("[WS]", ...args);
+}
+
+function now(){
+    return new Date().toLocaleTimeString();
+}
+
+function addLog(trackId, branch, machine, cmd){
+    const tbody = document.getElementById("logsBody");
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+        <td>${now()}</td>
+        <td>${branch}</td>
+        <td>${machine}</td>
+        <td>${trackId}</td>
+        <td>${cmd}</td>
+        <td style="color:#facc15">SENT</td>
+    `;
+
+    tbody.prepend(tr);
+    logMap[trackId] = tr;
+
+    console.log("LOG CREATED:", trackId, cmd);
+}
+
+function updateLog(trackId, status, color){
+    if(!logMap[trackId]) return;
+
+    const tr = logMap[trackId];
+    tr.children[5].textContent = status;
+    tr.children[5].style.color = color;
+
+    console.log("LOG UPDATE:", trackId, status);
+}
+
+/* ================= WS ================= */
 function connectWS(){
     socket = new WebSocket(WS_URL);
 
-    socket.onopen = () => {
-        console.log("WS CONNECTED");
+    socket.onopen = ()=>{
+        logWS("CONNECTED");
     };
 
     socket.onmessage = (msg)=>{
-        console.log("WS RESPONSE:", msg.data);
+        logWS("RAW:", msg.data);
+
+        try{
+            let data = JSON.parse(msg.data);
+            if(!data.message) return;
+
+            let content = data.message.content;
+            if(!content) return;
+
+            logWS("CONTENT:", content);
+
+            let parts = content.split(" ");
+            let trackId = parts[parts.length-1];
+
+            console.log("TRACK ID:", trackId);
+
+            if(!cardMap[trackId]) return;
+
+            let el = cardMap[trackId];
+
+            if(content.includes("RECEIVED")){
+                el.textContent="Received...";
+                el.style.color="#facc15";
+                updateLog(trackId,"RECEIVED","#facc15");
+            }
+            else if(content.includes("EXECUTED")){
+                el.textContent="Executed ✓";
+                el.style.color="#22c55e";
+                updateLog(trackId,"EXECUTED","#22c55e");
+            }
+            else if(content.includes("FAILED")){
+                el.textContent="Failed ✖";
+                el.style.color="#ef4444";
+                updateLog(trackId,"FAILED","#ef4444");
+            }
+
+        }catch(e){
+            console.log("PARSE ERROR:", e);
+        }
     };
 
-    socket.onclose = () => setTimeout(connectWS,3000);
+    socket.onclose = ()=>{
+        logWS("DISCONNECTED - RECONNECTING...");
+        setTimeout(connectWS,3000);
+    };
 }
 connectWS();
 
-/* ================= SUBSCRIBE ================= */
-function subscribe(branch){
-    if(!socket || socket.readyState !== 1) return;
-
-    const payload = {
-        command: "subscribe",
-        identifier: JSON.stringify({
-            channel: "DirectMachineChannel",
-            name: branch.master_id
-        })
-    };
-
-    console.log("SUBSCRIBE:", payload);
-    socket.send(JSON.stringify(payload));
-
-    activeBranch = branch;
-}
-
-/* ================= TRACK ID ================= */
+/* ================= SEND ================= */
 function track(){
     return Math.floor(10000 + Math.random()*90000);
 }
 
-/* ================= SEND COMMAND ================= */
-function send(branch,id,pulse){
-
-    if(!socket || socket.readyState !== 1){
-        console.log("Socket not ready");
+function send(branch,id,pulse,el){
+    if(socket.readyState!==1){
+        console.log("SOCKET NOT READY");
         return;
     }
 
-    const cmd = `PulseC ${id} ${pulse} ${track()}`;
+    const t = track();
+    const cmd = `PulseC ${id} ${pulse} ${t}`;
 
-    const payload = {
+    cardMap[t] = el;
+
+    el.textContent="Sending...";
+    el.style.color="#94a3b8";
+
+    console.log("SENT COMMAND:", cmd);
+
+    addLog(t, select.value, id, cmd);
+
+    socket.send(JSON.stringify({
         command:"message",
         identifier: JSON.stringify({
             channel:"DirectMachineChannel",
@@ -219,15 +336,27 @@ function send(branch,id,pulse){
             device_id:"WEB_APP",
             content: cmd
         })
-    };
+    }));
+}
 
-    console.log("SEND:", cmd);
-    socket.send(JSON.stringify(payload));
+/* ================= SUBSCRIBE ================= */
+function subscribe(branch){
+    if(socket.readyState!==1) return;
+
+    socket.send(JSON.stringify({
+        command:"subscribe",
+        identifier: JSON.stringify({
+            channel:"DirectMachineChannel",
+            name: branch.master_id
+        })
+    }));
+
+    console.log("SUBSCRIBED:", branch.master_id);
 }
 
 /* ================= UI ================= */
-const select = document.getElementById("branchSelect");
-const grid = document.getElementById("machineGrid");
+const select=document.getElementById("branchSelect");
+const grid=document.getElementById("machineGrid");
 
 Object.keys(branches).forEach(b=>{
     let o=document.createElement("option");
@@ -236,19 +365,19 @@ Object.keys(branches).forEach(b=>{
     select.appendChild(o);
 });
 
-select.onchange = () => {
-
-    grid.innerHTML = "";
-
-    const b = branches[select.value];
+select.onchange=()=>{
+    grid.innerHTML="";
+    const b=branches[select.value];
     if(!b) return;
 
     subscribe(b);
 
-    const wrap = document.createElement("div");
+    const wrap=document.createElement("div");
     wrap.className="branch-card";
 
-    wrap.innerHTML=`<div class="branch-title">${select.value}</div>`;
+    const title=document.createElement("div");
+    title.className="branch-title";
+    title.textContent=select.value;
 
     const wTitle=document.createElement("div");
     wTitle.className="section-title";
@@ -264,69 +393,80 @@ select.onchange = () => {
     const dGrid=document.createElement("div");
     dGrid.className="grid";
 
-    wrap.appendChild(wTitle);
-    wrap.appendChild(wGrid);
-    wrap.appendChild(dTitle);
-    wrap.appendChild(dGrid);
-
+    wrap.append(title,wTitle,wGrid,dTitle,dGrid);
     grid.appendChild(wrap);
 
-    function card(id,label){
-
+    function washerCard(id){
         const c=document.createElement("div");
         c.className="machine";
 
         c.innerHTML=`
-        <div class="title">${label} (ID:${id})</div>
+        <div class="title">Washer ${id}</div>
+        <div class="buttons">
+            <button class="light">L</button>
+            <button class="medium">M</button>
+            <button class="heavy">H</button>
+        </div>
+        <div class="status">Ready</div>`;
+
+        const map=[2,3,4];
+        const statusEl=c.querySelector(".status");
+
+        c.querySelectorAll("button").forEach((btn,i)=>{
+            btn.onclick=()=> send(b,id,map[i],statusEl);
+        });
+
+        return c;
+    }
+
+    function dryerCard(id,label){
+        const c=document.createElement("div");
+        c.className="machine";
+
+        c.innerHTML=`
+        <div class="title">${label}</div>
         <div class="buttons">
             <button class="light">L</button>
             <button class="medium">M</button>
             <button class="heavy">H</button>
             <button class="time">39</button>
             <button class="time">44</button>
+            <button class="time">49</button>
             <button class="topup">T</button>
         </div>
         <div class="status">Ready</div>`;
 
-        const map=[2,3,4,5,6,2];
+        const map=[2,3,4,5,6,7,2];
+        const statusEl=c.querySelector(".status");
 
         c.querySelectorAll("button").forEach((btn,i)=>{
-            btn.onclick=()=>{
-                const st=c.querySelector(".status");
-                st.textContent="Sending...";
-                send(b,id,map[i]);
-                setTimeout(()=>st.textContent="Ready",800);
-            };
+            btn.onclick=()=> send(b,id,map[i],statusEl);
         });
 
         return c;
     }
 
-    /* WASHERS */
     for(let i=1;i<=b.washers;i++)
-        wGrid.appendChild(card(i,"Washer "+i));
+        wGrid.appendChild(washerCard(i));
 
-    /* SPECIAL AGUIRRE 1 */
     if(select.value==="QK45 QK Aguirre 1"){
         for(let i=3;i<=10;i++)
-            dGrid.appendChild(card(b.washers+(i-2),"Dryer "+i));
+            dGrid.appendChild(dryerCard(b.washers+(i-2),"Dryer "+i));
         return;
     }
 
-    /* SPECIAL FLOODWAY */
     if(select.value==="QK46 LV Floodway"){
         for(let i=1;i<=b.dryers;i++){
             let id=b.washers+i;
             if(i===1) id=b.washers+2;
             if(i===2) id=b.washers+1;
-            dGrid.appendChild(card(id,"Dryer "+i));
+            dGrid.appendChild(dryerCard(id,"Dryer "+i));
         }
         return;
     }
 
-    /* DEFAULT DRYERS */
     for(let i=1;i<=b.dryers;i++)
-        dGrid.appendChild(card(b.washers+i,"Dryer "+i));
+        dGrid.appendChild(dryerCard(b.washers+i,"Dryer "+i));
 };
 
 </script>
