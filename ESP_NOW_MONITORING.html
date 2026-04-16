@@ -1,226 +1,351 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>ESP-NOW MACHINE CONTROL</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>ESP-NOW MACHINE CONTROL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-:root{
-  --bg:#0b1220;
-  --card:#111a2e;
-  --text:#e2e8f0;
-  --muted:#94a3b8;
-  --green:#22c55e;
-  --orange:#f59e0b;
-  --red:#ef4444;
-  --blue:#3b82f6;
-  --purple:#a855f7;
-}
+    <style>
+        :root {
+            --bg: #0b1220;
+            --card: #111a2e;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --green: #22c55e;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+        }
 
-*{box-sizing:border-box}
+        * {
+            box-sizing: border-box
+        }
 
-body{
-    margin:0;
-    font-family:Segoe UI, sans-serif;
-    background:linear-gradient(135deg,#0b1220,#0f172a);
-    color:var(--text);
+        body {
+            margin: 0;
+            font-family: Segoe UI, sans-serif;
+            background: linear-gradient(135deg, #0b1220, #0f172a);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-}
+        header {
+            padding: 18px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+        }
 
-header{
-    padding:18px;
-    text-align:center;
-    font-size:20px;
-    font-weight:700;
-}
+        .select-container {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0 20px;
+        }
 
-.select-container{
-    display:flex;
-    justify-content:center;
-    margin:10px 0 20px;
-}
+        select {
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            background: var(--card);
+            color: var(--text);
+        }
 
-select{
-    padding:12px;
-    border-radius:12px;
-    border:none;
-    background:var(--card);
-    color:var(--text);
-}
+        .container {
+            padding: 10px;
+            flex: 1;
+        }
 
-.container{
-    padding:10px;
-    flex:1; 
-}
+        .branch-card {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
 
-.branch-card{
-    background:var(--card);
-    border-radius:18px;
-    padding:15px;
-    margin-bottom:15px;
-}
+        .branch-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
 
-.branch-title{
-    font-size:18px;
-    font-weight:700;
-    margin-bottom:10px;
-}
+        .section-title {
+            margin: 10px 0;
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 600;
+        }
 
-.section-title{
-    margin:10px 0;
-    color:var(--muted);
-    font-size:14px;
-    font-weight:600;
-}
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 10px;
+        }
 
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
-    gap:10px;
-}
+        .machine {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 10px;
+        }
 
-.machine{
-    background:#0f172a;
-    border-radius:14px;
-    padding:10px;
-}
+        .title {
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
 
-.title{
-    font-size:13px;
-    margin-bottom:8px;
-}
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
 
-.buttons{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:6px;
-}
+        button {
+            padding: 7px;
+            border: none;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
 
-button{
-    padding:7px;
-    border:none;
-    border-radius:8px;
-    font-size:11px;
-    font-weight:600;
-    cursor:pointer;
-}
+        .light {
+            background: var(--green);
+            color: #fff
+        }
 
-.light{background:var(--green);color:#fff}
-.medium{background:var(--orange);color:#fff}
-.heavy{background:var(--red);color:#fff}
-.time{background:var(--blue);color:#fff}
-.topup{background:var(--purple);color:#fff}
+        .medium {
+            background: var(--orange);
+            color: #fff
+        }
 
-.status{
-    font-size:11px;
-    margin-top:6px;
-    color:var(--muted);
-}
+        .heavy {
+            background: var(--red);
+            color: #fff
+        }
 
-.logs-container{
-    background:var(--card);
-    padding:10px;
-    margin-top:auto; 
-    border-top:1px solid #1f2a44;
-}
+        .time {
+            background: var(--blue);
+            color: #fff
+        }
 
-.logs-title{
-    font-size:13px;
-    font-weight:700;
-    margin-bottom:8px;
-}
+        .topup {
+            background: var(--purple);
+            color: #fff
+        }
 
-table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:11px;
-}
+        .status {
+            font-size: 11px;
+            margin-top: 6px;
+            color: var(--muted);
+        }
 
-th,td{
-    padding:6px;
-    border-bottom:1px solid #1f2a44;
-    text-align:left;
-}
+        /* LOGS */
+        .logs-container {
+            background: var(--card);
+            padding: 10px;
+            border-top: 1px solid #1f2a44;
+            height: 230px;
+            display: flex;
+            flex-direction: column;
+        }
 
-th{
-    color:var(--muted);
-}
-</style>
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .logs-title {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .clear-btn {
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .logs-table-wrapper {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .logs-table-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .logs-table-wrapper::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        th,
+        td {
+            padding: 6px;
+            border-bottom: 1px solid #1f2a44;
+            text-align: left;
+        }
+
+        th {
+            color: var(--muted);
+        }
+    </style>
 </head>
 
 <body>
 
-<header>ESP-NOW MACHINE CONTROL PANEL</header>
+    <header>ESP-NOW MACHINE CONTROL PANEL</header>
 
-<div class="select-container">
-    <select id="branchSelect">
-        <option value="">Select Branch</option>
-    </select>
-</div>
+    <div class="select-container">
+        <select id="branchSelect">
+            <option value="">Select Branch</option>
+        </select>
+    </div>
 
-<div class="container" id="machineGrid"></div>
+    <div class="container" id="machineGrid"></div>
 
-<div class="logs-container">
-    <div class="logs-title">📜 SYSTEM LOGS</div>
-    <table>
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Branch</th>
-                <th>Machine</th>
-                <th>Track</th>
-                <th>Command</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody id="logsBody"></tbody>
-    </table>
-</div>
+    <div class="logs-container">
+        <div class="logs-header">
+            <div class="logs-title">📜 SYSTEM LOGS</div>
+            <button class="clear-btn" onclick="clearLogs()">Clear</button>
+        </div>
 
-<script>
+        <div class="logs-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Branch</th>
+                        <th>Machine</th>
+                        <th>Track</th>
+                        <th>Command</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="logsBody"></tbody>
+            </table>
+        </div>
+    </div>
 
-const WS_URL = "wss://app.labavendo.com/cable";
+    <script>
 
-const branches = {
-"QK016 QK Aguirre 2 Parañaque NCR":{master_id:"C403",washers:11,dryers:8},
-"QK001 QK Alabang Hills Muntinlupa NCR":{master_id:"C406",washers:13,dryers:12},
-"QK020 QK Green Revolution Las Piñas NCR":{master_id:"C401",washers:15,dryers:8},
-"LVGW LV Greenwoods Taytay RIZ":{master_id:"C500",washers:8,dryers:4},
-"QK022 QK Laon Laan Manila NCR":{master_id:"C402",washers:11,dryers:10},
-"QK010 MD Malate Manila NCR":{master_id:"C510",washers:9,dryers:14},
-"QK36 QK P Tuazon":{master_id:"C506",washers:8,dryers:6},
-"QK41 QK Fairview":{master_id:"C405",washers:19,dryers:14},
-"QK42 QK UP Diliman":{master_id:"C410",washers:9,dryers:6},
-"QK43 QK BF Resort":{master_id:"C407",washers:13,dryers:8},
-"QK31 QK Fajardo":{master_id:"C101",washers:24,dryers:8},
-"QK45 QK Aguirre 1":{master_id:"C300",washers:9,dryers:8},
-"QK46 LV Floodway":{master_id:"C409",washers:8,dryers:4},
-"QK34 QK K3rd":{master_id:"C411",washers:8,dryers:4},
-"QK23 QK Nangka":{master_id:"C505",washers:12,dryers:8}
-};
+        const WS_URL = "wss://app.labavendo.com/cable";
 
-let socket;
-let cardMap = {};
-let logMap = {};
+        const branches = {
+            "QK016 QK Aguirre 2 Parañaque NCR": { master_id: "C700", washers: 11, dryers: 8 },
+            "QK001 QK Alabang Hills Muntinlupa NCR": { master_id: "C406", washers: 13, dryers: 12 },
+            "QK020 QK Green Revolution Las Piñas NCR": { master_id: "C401", washers: 15, dryers: 8 },
+            "LVGW LV Greenwoods Taytay RIZ": { master_id: "C500", washers: 8, dryers: 4 },
+            "QK022 QK Laon Laan Manila NCR": { master_id: "C402", washers: 11, dryers: 10 },
+            "QK010 MD Malate Manila NCR": { master_id: "C510", washers: 9, dryers: 14 },
+            "QK36 QK P Tuazon": { master_id: "C506", washers: 8, dryers: 6 },
+            "QK41 QK Fairview": { master_id: "C405", washers: 19, dryers: 14 },
+            "QK42 QK UP Diliman": { master_id: "C410", washers: 9, dryers: 6 },
+            "QK43 QK BF Resort": { master_id: "C407", washers: 13, dryers: 8 },
+            "QK31 QK Fajardo": { master_id: "C101", washers: 24, dryers: 8 },
+            "QK45 QK Aguirre 1": { master_id: "C300", washers: 9, dryers: 8 },
+            "QK46 LV Floodway": { master_id: "C409", washers: 8, dryers: 4 },
+            "QK34 QK K3rd": { master_id: "C411", washers: 8, dryers: 4 },
+            "QK23 QK Nangka": { master_id: "C505", washers: 12, dryers: 8 }
+        };
 
-function logWS(...args){
-    console.log("[WS]", ...args);
-}
+        let socket;
+        let cardMap = {};
+        let logMap = {};
 
-function now(){
-    return new Date().toLocaleTimeString();
-}
+        function logWS(...args) {
+            console.log("[WS]", ...args);
+        }
 
-function addLog(trackId, branch, machine, cmd){
-    const tbody = document.getElementById("logsBody");
+        function now() {
+            return new Date().toLocaleString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "numeric",
+                second: "numeric"
+            });
+        }
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-        <td>${now()}</td>
+        /* STORAGE */
+        function saveToStorage(log) {
+            let logs = JSON.parse(localStorage.getItem("machine_logs") || "[]");
+            logs.unshift(log);
+            if (logs.length > 200) logs.pop();
+            localStorage.setItem("machine_logs", JSON.stringify(logs));
+        }
+
+        function updateStorage(trackId, status, color) {
+            let logs = JSON.parse(localStorage.getItem("machine_logs") || "[]");
+            logs = logs.map(l => {
+                if (l.track == trackId) {
+                    l.status = status;
+                    l.color = color;
+                }
+                return l;
+            });
+            localStorage.setItem("machine_logs", JSON.stringify(logs));
+        }
+
+        function loadLogs() {
+            const logs = JSON.parse(localStorage.getItem("machine_logs") || "[]");
+            const tbody = document.getElementById("logsBody");
+
+            logs.forEach(log => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+            <td>${log.time}</td>
+            <td>${log.branch}</td>
+            <td>${log.machine}</td>
+            <td>${log.track}</td>
+            <td>${log.cmd}</td>
+            <td style="color:${log.color}">${log.status}</td>
+        `;
+                tbody.appendChild(tr);
+                logMap[log.track] = tr;
+            });
+        }
+
+        /* CLEAR */
+        function clearLogs() {
+            if (!confirm("Clear all logs?")) return;
+            localStorage.removeItem("machine_logs");
+            document.getElementById("logsBody").innerHTML = "";
+            logMap = {};
+        }
+
+        /* LOGS */
+        function addLog(trackId, branch, machine, cmd) {
+            const tbody = document.getElementById("logsBody");
+
+            const log = {
+                time: now(),
+                branch,
+                machine,
+                track: trackId,
+                cmd,
+                status: "SENT",
+                color: "#facc15"
+            };
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+        <td>${log.time}</td>
         <td>${branch}</td>
         <td>${machine}</td>
         <td>${trackId}</td>
@@ -228,180 +353,169 @@ function addLog(trackId, branch, machine, cmd){
         <td style="color:#facc15">SENT</td>
     `;
 
-    tbody.prepend(tr);
-    logMap[trackId] = tr;
-
-    console.log("LOG CREATED:", trackId, cmd);
-}
-
-function updateLog(trackId, status, color){
-    if(!logMap[trackId]) return;
-
-    const tr = logMap[trackId];
-    tr.children[5].textContent = status;
-    tr.children[5].style.color = color;
-
-    console.log("LOG UPDATE:", trackId, status);
-}
-
-/* ================= WS ================= */
-function connectWS(){
-    socket = new WebSocket(WS_URL);
-
-    socket.onopen = ()=>{
-        logWS("CONNECTED");
-    };
-
-    socket.onmessage = (msg)=>{
-        logWS("RAW:", msg.data);
-
-        try{
-            let data = JSON.parse(msg.data);
-            if(!data.message) return;
-
-            let content = data.message.content;
-            if(!content) return;
-
-            logWS("CONTENT:", content);
-
-            let parts = content.split(" ");
-            let trackId = parts[parts.length-1];
-
-            console.log("TRACK ID:", trackId);
-
-            if(!cardMap[trackId]) return;
-
-            let el = cardMap[trackId];
-
-            if(content.includes("RECEIVED")){
-                el.textContent="Received...";
-                el.style.color="#facc15";
-                updateLog(trackId,"RECEIVED","#facc15");
-            }
-            else if(content.includes("EXECUTED")){
-                el.textContent="Executed ✓";
-                el.style.color="#22c55e";
-                updateLog(trackId,"EXECUTED","#22c55e");
-            }
-            else if(content.includes("FAILED")){
-                el.textContent="Failed ✖";
-                el.style.color="#ef4444";
-                updateLog(trackId,"FAILED","#ef4444");
-            }
-
-        }catch(e){
-            console.log("PARSE ERROR:", e);
+            tbody.prepend(tr);
+            logMap[trackId] = tr;
+            saveToStorage(log);
         }
-    };
 
-    socket.onclose = ()=>{
-        logWS("DISCONNECTED - RECONNECTING...");
-        setTimeout(connectWS,3000);
-    };
-}
-connectWS();
+        function updateLog(trackId, status, color) {
+            if (!logMap[trackId]) return;
 
-/* ================= SEND ================= */
-function track(){
-    return Math.floor(10000 + Math.random()*90000);
-}
+            const tr = logMap[trackId];
+            tr.children[5].textContent = status;
+            tr.children[5].style.color = color;
 
-function send(branch,id,pulse,el){
-    if(socket.readyState!==1){
-        console.log("SOCKET NOT READY");
-        return;
-    }
+            updateStorage(trackId, status, color);
+        }
 
-    const t = track();
-    const cmd = `PulseC ${id} ${pulse} ${t}`;
+        /* WS */
+        function connectWS() {
+            socket = new WebSocket(WS_URL);
 
-    cardMap[t] = el;
+            socket.onopen = () => logWS("CONNECTED");
 
-    el.textContent="Sending...";
-    el.style.color="#94a3b8";
+            socket.onmessage = (msg) => {
+                logWS("RAW:", msg.data);
 
-    console.log("SENT COMMAND:", cmd);
+                try {
+                    let data = JSON.parse(msg.data);
+                    if (!data.message) return;
 
-    addLog(t, select.value, id, cmd);
+                    let content = data.message.content;
+                    if (!content) return;
 
-    socket.send(JSON.stringify({
-        command:"message",
-        identifier: JSON.stringify({
-            channel:"DirectMachineChannel",
-            name: branch.master_id
-        }),
-        data: JSON.stringify({
-            action:"message",
-            source:"web",
-            device_id:"WEB_APP",
-            content: cmd
-        })
-    }));
-}
+                    let parts = content.split(" ");
+                    let trackId = parts[parts.length - 1];
 
-/* ================= SUBSCRIBE ================= */
-function subscribe(branch){
-    if(socket.readyState!==1) return;
+                    if (!cardMap[trackId]) return;
 
-    socket.send(JSON.stringify({
-        command:"subscribe",
-        identifier: JSON.stringify({
-            channel:"DirectMachineChannel",
-            name: branch.master_id
-        })
-    }));
+                    let el = cardMap[trackId];
 
-    console.log("SUBSCRIBED:", branch.master_id);
-}
+                    if (content.includes("RECEIVED")) {
+                        el.textContent = "Received...";
+                        el.style.color = "#facc15";
+                        updateLog(trackId, "RECEIVED", "#facc15");
+                    }
+                    else if (content.includes("EXECUTED")) {
+                        el.textContent = "Executed ✓";
+                        el.style.color = "#22c55e";
+                        updateLog(trackId, "EXECUTED", "#22c55e");
+                    }
+                    else if (content.includes("FAILED")) {
+                        el.textContent = "Failed ✖";
+                        el.style.color = "#ef4444";
+                        updateLog(trackId, "FAILED", "#ef4444");
+                    }
 
-/* ================= UI ================= */
-const select=document.getElementById("branchSelect");
-const grid=document.getElementById("machineGrid");
+                } catch (e) {
+                    console.log("PARSE ERROR:", e);
+                }
+            };
 
-Object.keys(branches).forEach(b=>{
-    let o=document.createElement("option");
-    o.value=b;
-    o.textContent=b;
-    select.appendChild(o);
-});
+            socket.onclose = () => {
+                logWS("RECONNECTING...");
+                setTimeout(connectWS, 3000);
+            };
+        }
+        connectWS();
 
-select.onchange=()=>{
-    grid.innerHTML="";
-    const b=branches[select.value];
-    if(!b) return;
+        /* SEND */
+        function track() {
+            return Math.floor(10000 + Math.random() * 90000);
+        }
 
-    subscribe(b);
+        function send(branch, id, pulse, el, machineLabel) {
+            if (socket.readyState !== 1) return;
 
-    const wrap=document.createElement("div");
-    wrap.className="branch-card";
+            const t = track();
+            const cmd = `PulseC ${id} ${pulse} ${t}`;
 
-    const title=document.createElement("div");
-    title.className="branch-title";
-    title.textContent=select.value;
+            cardMap[t] = el;
+            el.textContent = "Sending...";
+            el.style.color = "#94a3b8";
 
-    const wTitle=document.createElement("div");
-    wTitle.className="section-title";
-    wTitle.textContent="WASHERS";
+            addLog(t, select.value, machineLabel, cmd);
 
-    const wGrid=document.createElement("div");
-    wGrid.className="grid";
+            socket.send(JSON.stringify({
+                command: "message",
+                identifier: JSON.stringify({
+                    channel: "DirectMachineChannel",
+                    name: branch.master_id
+                }),
+                data: JSON.stringify({
+                    action: "message",
+                    source: "web",
+                    device_id: "WEB_APP",
+                    content: cmd
+                })
+            }));
+        }
 
-    const dTitle=document.createElement("div");
-    dTitle.className="section-title";
-    dTitle.textContent="DRYERS";
+        /* SUBSCRIBE */
+        function subscribe(branch) {
+            if (socket.readyState !== 1) return;
 
-    const dGrid=document.createElement("div");
-    dGrid.className="grid";
+            socket.send(JSON.stringify({
+                command: "subscribe",
+                identifier: JSON.stringify({
+                    channel: "DirectMachineChannel",
+                    name: branch.master_id
+                })
+            }));
 
-    wrap.append(title,wTitle,wGrid,dTitle,dGrid);
-    grid.appendChild(wrap);
+            console.log("SUBSCRIBED:", branch.master_id);
+        }
 
-    function washerCard(id){
-        const c=document.createElement("div");
-        c.className="machine";
+        /* UI */
+        const select = document.getElementById("branchSelect");
+        const grid = document.getElementById("machineGrid");
 
-        c.innerHTML=`
-        <div class="title">Washer ${id}</div>
+        Object.keys(branches).forEach(b => {
+            let o = document.createElement("option");
+            o.value = b;
+            o.textContent = b;
+            select.appendChild(o);
+        });
+
+        select.onchange = () => {
+            grid.innerHTML = "";
+            const b = branches[select.value];
+            if (!b) return;
+
+            subscribe(b);
+
+            const wrap = document.createElement("div");
+            wrap.className = "branch-card";
+
+            const title = document.createElement("div");
+            title.className = "branch-title";
+            title.textContent = select.value;
+
+            const wTitle = document.createElement("div");
+            wTitle.className = "section-title";
+            wTitle.textContent = "WASHERS";
+
+            const wGrid = document.createElement("div");
+            wGrid.className = "grid";
+
+            const dTitle = document.createElement("div");
+            dTitle.className = "section-title";
+            dTitle.textContent = "DRYERS";
+
+            const dGrid = document.createElement("div");
+            dGrid.className = "grid";
+
+            wrap.append(title, wTitle, wGrid, dTitle, dGrid);
+            grid.appendChild(wrap);
+
+            function washerCard(id) {
+                const c = document.createElement("div");
+                c.className = "machine";
+
+                const label = `Washer ${id}`;
+
+                c.innerHTML = `
+        <div class="title">${label}</div>
         <div class="buttons">
             <button class="light">L</button>
             <button class="medium">M</button>
@@ -409,21 +523,21 @@ select.onchange=()=>{
         </div>
         <div class="status">Ready</div>`;
 
-        const map=[2,3,4];
-        const statusEl=c.querySelector(".status");
+                const map = [2, 3, 4];
+                const statusEl = c.querySelector(".status");
 
-        c.querySelectorAll("button").forEach((btn,i)=>{
-            btn.onclick=()=> send(b,id,map[i],statusEl);
-        });
+                c.querySelectorAll("button").forEach((btn, i) => {
+                    btn.onclick = () => send(b, id, map[i], statusEl, label);
+                });
 
-        return c;
-    }
+                return c;
+            }
 
-    function dryerCard(id,label){
-        const c=document.createElement("div");
-        c.className="machine";
+            function dryerCard(id, label) {
+                const c = document.createElement("div");
+                c.className = "machine";
 
-        c.innerHTML=`
+                c.innerHTML = `
         <div class="title">${label}</div>
         <div class="buttons">
             <button class="light">L</button>
@@ -436,40 +550,43 @@ select.onchange=()=>{
         </div>
         <div class="status">Ready</div>`;
 
-        const map=[2,3,4,5,6,7,2];
-        const statusEl=c.querySelector(".status");
+                const map = [2, 3, 4, 5, 6, 7, 2];
+                const statusEl = c.querySelector(".status");
 
-        c.querySelectorAll("button").forEach((btn,i)=>{
-            btn.onclick=()=> send(b,id,map[i],statusEl);
-        });
+                c.querySelectorAll("button").forEach((btn, i) => {
+                    btn.onclick = () => send(b, id, map[i], statusEl, label);
+                });
 
-        return c;
-    }
+                return c;
+            }
 
-    for(let i=1;i<=b.washers;i++)
-        wGrid.appendChild(washerCard(i));
+            for (let i = 1; i <= b.washers; i++)
+                wGrid.appendChild(washerCard(i));
 
-    if(select.value==="QK45 QK Aguirre 1"){
-        for(let i=3;i<=10;i++)
-            dGrid.appendChild(dryerCard(b.washers+(i-2),"Dryer "+i));
-        return;
-    }
+            if (select.value === "QK45 QK Aguirre 1") {
+                for (let i = 3; i <= 10; i++)
+                    dGrid.appendChild(dryerCard(b.washers + (i - 2), "Dryer " + i));
+                return;
+            }
 
-    if(select.value==="QK46 LV Floodway"){
-        for(let i=1;i<=b.dryers;i++){
-            let id=b.washers+i;
-            if(i===1) id=b.washers+2;
-            if(i===2) id=b.washers+1;
-            dGrid.appendChild(dryerCard(id,"Dryer "+i));
-        }
-        return;
-    }
+            if (select.value === "QK46 LV Floodway") {
+                for (let i = 1; i <= b.dryers; i++) {
+                    let id = b.washers + i;
+                    if (i === 1) id = b.washers + 2;
+                    if (i === 2) id = b.washers + 1;
+                    dGrid.appendChild(dryerCard(id, "Dryer " + i));
+                }
+                return;
+            }
 
-    for(let i=1;i<=b.dryers;i++)
-        dGrid.appendChild(dryerCard(b.washers+i,"Dryer "+i));
-};
+            for (let i = 1; i <= b.dryers; i++)
+                dGrid.appendChild(dryerCard(b.washers + i, "Dryer " + i));
+        };
 
-</script>
+        loadLogs();
+
+    </script>
 
 </body>
+
 </html>
