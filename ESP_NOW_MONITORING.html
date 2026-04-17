@@ -142,7 +142,6 @@
             color: var(--muted);
         }
 
-        /* LOGS */
         .logs-container {
             background: var(--card);
             padding: 10px;
@@ -527,7 +526,13 @@
                 const statusEl = c.querySelector(".status");
 
                 c.querySelectorAll("button").forEach((btn, i) => {
-                    btn.onclick = () => send(b, id, map[i], statusEl, label);
+                    btn.onclick = () => {
+                        const action = ["Light", "Medium", "Heavy"][i];
+
+                        if (!confirm(`Are you sure you want to send ${action} on ${label}?`)) return;
+
+                        send(b, id, map[i], statusEl, label);
+                    };
                 });
 
                 return c;
@@ -554,7 +559,13 @@
                 const statusEl = c.querySelector(".status");
 
                 c.querySelectorAll("button").forEach((btn, i) => {
-                    btn.onclick = () => send(b, id, map[i], statusEl, label);
+                    btn.onclick = () => {
+                        const actions = ["Light", "Medium", "Heavy", "39 mins", "44 mins", "49 mins", "Top-up"];
+
+                        if (!confirm(`Are you sure you want to send ${actions[i]} on ${label}?`)) return;
+
+                        send(b, id, map[i], statusEl, label);
+                    };
                 });
 
                 return c;
