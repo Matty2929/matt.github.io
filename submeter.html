@@ -5,49 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Submeter Bill Split</title>
 <meta name="description" content="Split the monthly Meralco bill between the main house and the submeter.">
-<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#191814" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c2410c'/%3E%3Cpath d='M18 4 8 18h7l-1 10 10-14h-7z' fill='%23fff'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111113'/%3E%3Cpath d='M18 4 8 18h7l-1 10 10-14h-7z' fill='%23fff'/%3E%3C/svg%3E">
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #f6f3ec;
-    --surface: #fffdf8;
-    --ink: #1f1d19;
-    --muted: #68635a;
-    --line: #dfd9cc;
-    --input-bg: #ffffff;
-    --sub: #c2410c;
-    --sub-soft: #fbe9df;
-    --main: #0f6b64;
-    --main-soft: #dcefec;
-    --on-accent: #ffffff;
-    --meter-bg: #23211c;
-    --meter-ink: #f7c873;
-    --warn-bg: #fdf2d0;
-    --warn-ink: #6f4e00;
-    --error-bg: #fbe3e0;
-    --error-ink: #96231a;
+    --bg: #ffffff;
+    --field: #f4f4f5;
+    --ink: #111113;
+    --muted: #6b6b73;
+    --line: #e6e6e9;
+    --track: #d4d4d8;
+    --on-ink: #ffffff;
+    --warn-bg: #fdf6e3;
+    --warn-ink: #6f5200;
+    --error-bg: #fdeeee;
+    --error-ink: #a12b22;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #191814;
-      --surface: #23211c;
-      --ink: #f2eee5;
-      --muted: #a9a398;
-      --line: #3b3830;
-      --input-bg: #1c1b17;
-      --sub: #f0894f;
-      --sub-soft: #40271a;
-      --main: #55c4b8;
-      --main-soft: #17352f;
-      --on-accent: #191814;
-      --meter-bg: #12110e;
-      --warn-bg: #3d3112;
-      --warn-ink: #f3d68a;
-      --error-bg: #431d19;
-      --error-ink: #f6b4ac;
+      --bg: #0e0e10;
+      --field: #1a1a1d;
+      --ink: #f4f4f5;
+      --muted: #9d9da6;
+      --line: #27272b;
+      --track: #3a3a40;
+      --on-ink: #0e0e10;
+      --warn-bg: #2a2410;
+      --warn-ink: #eed58e;
+      --error-bg: #2f1716;
+      --error-ink: #f4aea7;
     }
   }
 
@@ -57,236 +46,243 @@
     margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
     -webkit-text-size-adjust: 100%;
   }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 16px 56px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
 
-  header { margin-bottom: 22px; }
-  h1 { margin: 0; font-size: 1.6rem; line-height: 1.2; letter-spacing: -0.01em; }
-  header p { margin: 4px 0 0; color: var(--muted); }
-  h2 { margin: 0 0 14px; font-size: 1.05rem; }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 24px;
+    margin-bottom: 40px;
+  }
+  h1 { margin: 0; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
+  h2 { margin: 0 0 20px; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; }
 
-  .layout { display: grid; gap: 18px; align-items: start; }
+  .tabs { display: flex; gap: 2px; padding: 3px; background: var(--field); border-radius: 10px; }
+  .tabs a {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .tabs a:hover { color: var(--ink); }
+  .tabs a[aria-current="page"] { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+  .layout { display: grid; gap: 40px; align-items: start; }
   @media (min-width: 800px) {
-    .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    .result { position: sticky; top: 16px; }
+    .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; }
+    .result { position: sticky; top: 24px; }
   }
+  .result { padding: 24px; background: var(--field); border-radius: 16px; }
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 18px;
-  }
-
-  fieldset { border: 0; margin: 0 0 20px; padding: 0; min-width: 0; }
+  fieldset { border: 0; margin: 0 0 28px; padding: 0; min-width: 0; }
   fieldset:last-of-type { margin-bottom: 0; }
-  legend { padding: 0; margin-bottom: 10px; font-weight: 650; }
+  legend { padding: 0; margin-bottom: 12px; font-weight: 600; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field { display: block; min-width: 0; }
-  .field > span { display: block; margin-bottom: 4px; font-size: 0.875rem; color: var(--muted); }
-  .hint { margin: 8px 0 0; font-size: 0.8125rem; color: var(--muted); }
+  .field > span { display: block; margin-bottom: 6px; font-size: 0.8125rem; color: var(--muted); }
+  .hint { margin: 10px 0 0; font-size: 0.8125rem; color: var(--muted); }
+  .hint div + div { margin-top: 2px; }
 
   input, select, button { font: inherit; color: inherit; }
   input, select {
     width: 100%;
-    min-height: 44px;
-    padding: 8px 10px;
-    background: var(--input-bg);
-    border: 1px solid var(--line);
-    border-radius: 8px;
+    min-height: 46px;
+    padding: 8px 12px;
+    background: var(--field);
+    border: 1px solid transparent;
+    border-radius: 10px;
   }
-  input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
-    outline: 2px solid var(--sub);
-    outline-offset: 1px;
+  input::placeholder { color: var(--muted); opacity: 0.7; }
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
   }
-  input.meter {
-    background: var(--meter-bg);
-    border-color: var(--meter-bg);
-    color: var(--meter-ink);
-    font-family: var(--mono);
-    font-size: 1.15rem;
-    letter-spacing: 0.04em;
+  select option { background: var(--bg); color: var(--ink); }
+  input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible, a:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
   }
-  input.meter::placeholder { color: var(--meter-ink); opacity: 0.4; }
+  input.meter { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.02em; }
+  input.meter[readonly] { background: transparent; border-color: var(--line); cursor: not-allowed; }
 
   button {
-    min-height: 44px;
-    padding: 8px 14px;
-    background: transparent;
-    border: 1px solid var(--line);
-    border-radius: 8px;
+    min-height: 46px;
+    padding: 8px 16px;
+    background: var(--field);
+    border: 0;
+    border-radius: 10px;
+    font-weight: 500;
     cursor: pointer;
+    transition: opacity 0.15s ease;
   }
-  button:hover { border-color: var(--muted); }
-  button.primary {
-    background: var(--sub);
-    border-color: var(--sub);
-    color: var(--on-accent);
-    font-weight: 650;
-  }
-  button.primary:hover { filter: brightness(1.08); }
-  button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+  button:hover { opacity: 0.8; }
+  button.primary { background: var(--ink); color: var(--on-ink); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .result button:not(.primary) { background: transparent; box-shadow: inset 0 0 0 1px var(--track); }
 
-  .eyebrow { margin: 0; font-size: 0.875rem; color: var(--muted); }
-  .amount {
-    margin: 0;
-    font-size: 2.5rem;
-    line-height: 1.15;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
-  }
-  .amount.sub { color: var(--sub); }
-  .second { margin-top: 12px; }
-  .second .amount { font-size: 1.6rem; color: var(--main); }
-
-  .bar { display: flex; gap: 2px; height: 12px; margin: 18px 0 6px; border-radius: 6px; overflow: hidden; background: var(--line); }
-  .bar div { min-width: 2px; }
-  .bar .sub { background: var(--sub); }
-  .bar .main { background: var(--main); }
-  .bar-legend { display: flex; justify-content: space-between; gap: 12px; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-  dl { margin: 18px 0 0; border-top: 1px solid var(--line); }
-  dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-  dt { color: var(--muted); font-size: 0.9375rem; }
-  dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 550; }
-
-  .note { margin: 14px 0 0; font-size: 0.9375rem; }
-  .alert { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; font-size: 0.9375rem; }
-  .alert.warn { background: var(--warn-bg); color: var(--warn-ink); }
-  .alert.error { background: var(--error-bg); color: var(--error-ink); }
-  .empty { margin: 0; color: var(--muted); }
-
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
-  .status { min-height: 1.5em; margin: 8px 0 0; font-size: 0.875rem; color: var(--muted); }
-
-  .history { margin-top: 18px; }
-  .history-list { list-style: none; margin: 0; padding: 0; }
-  .bill {
-    display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto;
-    gap: 6px 14px;
-    align-items: center;
-    padding: 10px 0;
-    border-top: 1px solid var(--line);
-  }
-  .bill-month { background: none; border: 0; padding: 0; min-height: 44px; text-align: left; color: inherit; }
-  .bill-month strong { display: block; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
-  .bill-month small { color: var(--muted); font-variant-numeric: tabular-nums; }
-  .money small { display: block; font-size: 0.75rem; color: var(--muted); }
-  .money span { font-variant-numeric: tabular-nums; font-weight: 600; }
-  .money.sub span { color: var(--sub); }
-  .money.main span { color: var(--main); }
-  .bill-tools { display: flex; align-items: center; gap: 8px; }
-  .paid { display: flex; align-items: center; gap: 6px; min-height: 44px; font-size: 0.875rem; cursor: pointer; }
-  .paid input { width: 20px; min-height: 20px; height: 20px; accent-color: var(--main); }
-  .remove { padding: 8px 10px; font-size: 0.875rem; color: var(--muted); }
-  @media (max-width: 560px) {
-    .bill { grid-template-columns: 1fr 1fr; }
-    .bill-month, .bill-tools { grid-column: 1 / -1; }
-    .bill-tools { justify-content: space-between; }
-    .amount { font-size: 2.1rem; }
-  }
-
-  summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 650; }
-  summary::before { content: "▸"; margin-right: 8px; color: var(--muted); }
-  details[open] summary::before { content: "▾"; }
-  .details-body { display: grid; gap: 16px; padding-top: 8px; }
-  .file-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
-
-  .tabs { display: flex; gap: 8px; margin-top: 14px; }
-  .tabs a {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 8px 20px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    color: inherit;
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .tabs a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
-
-  input.meter[readonly] { opacity: 0.8; cursor: not-allowed; }
-  .hint a, .link-button { color: var(--sub); font-weight: 600; }
+  .hint a, .link-button { color: var(--ink); font-weight: 500; text-underline-offset: 2px; }
   .link-button {
     min-height: 0;
     padding: 0;
     background: none;
-    border: 0;
+    border-radius: 0;
     font-size: inherit;
     text-decoration: underline;
   }
-  .hint div + div { margin-top: 2px; }
+
+  .eyebrow { margin: 0 0 2px; font-size: 0.8125rem; color: var(--muted); }
+  .amount {
+    margin: 0;
+    font-size: 2.75rem;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .second { margin-top: 20px; }
+  .second .amount { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
+
+  .bar { display: flex; gap: 3px; height: 4px; margin: 24px 0 8px; }
+  .bar div { min-width: 2px; border-radius: 2px; }
+  .bar .sub { background: var(--ink); }
+  .bar .main { background: var(--track); }
+  .bar-legend { display: flex; justify-content: space-between; gap: 12px; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  dl { margin: 24px 0 0; }
+  dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 5px 0; }
+  dt { color: var(--muted); font-size: 0.875rem; }
+  dd { margin: 0; text-align: right; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+
+  .note { margin: 16px 0 0; font-size: 0.8125rem; color: var(--muted); }
+  .alert { margin: 0 0 16px; padding: 10px 12px; border-radius: 10px; font-size: 0.875rem; }
+  .alert.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .alert.error { background: var(--error-bg); color: var(--error-ink); }
+  .empty { margin: 0; color: var(--muted); font-size: 0.875rem; }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 24px; }
+  .status { min-height: 1.5em; margin: 10px 0 0; font-size: 0.8125rem; color: var(--muted); }
+  .result .status { margin-bottom: -6px; }
+
+  .history { margin-top: 56px; }
+  .history-list { list-style: none; margin: 0; padding: 0; }
+  .bill {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 6px 16px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+  }
+  .bill-month { background: none; padding: 0; min-height: 44px; text-align: left; border-radius: 0; font-weight: 400; }
+  .bill-month strong { display: block; font-weight: 500; }
+  .bill-month small { color: var(--muted); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+  .money small { display: block; font-size: 0.75rem; color: var(--muted); }
+  .money span { font-variant-numeric: tabular-nums; }
+  .bill-tools { display: flex; align-items: center; gap: 16px; }
+  .paid { display: flex; align-items: center; gap: 6px; min-height: 44px; font-size: 0.875rem; cursor: pointer; }
+  .paid input { width: 18px; min-height: 18px; height: 18px; accent-color: var(--ink); }
+  .remove { min-height: 44px; padding: 0; background: none; border-radius: 0; font-size: 0.875rem; font-weight: 400; color: var(--muted); }
+  @media (max-width: 560px) {
+    .bill { grid-template-columns: 1fr 1fr; }
+    .bill-month, .bill-tools { grid-column: 1 / -1; }
+    .bill-tools { justify-content: space-between; }
+    .amount { font-size: 2.375rem; }
+  }
+
+  details { border-top: 1px solid var(--line); }
+  summary { min-height: 52px; display: flex; align-items: center; justify-content: space-between; list-style: none; cursor: pointer; font-weight: 500; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 1.25rem; font-weight: 400; color: var(--muted); }
+  details[open] summary::after { content: "−"; }
+  .details-body { display: grid; gap: 16px; padding: 4px 0 8px; }
+  .file-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  fieldset .file-buttons { margin-top: 0; }
 
   .photo-preview {
     display: block;
     width: 100%;
     max-height: 240px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     object-fit: contain;
-    background: var(--meter-bg);
-    border-radius: 8px;
+    background: var(--field);
+    border-radius: 10px;
   }
-  #readSave { width: 100%; margin-top: 18px; }
-  .reminder { margin: 0 0 18px; }
+  #readSave { width: 100%; margin-top: 28px; }
+  .reminder { margin: 0 0 32px; }
 
   .reading {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 10px 12px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 4px 14px;
     align-items: center;
-    padding: 12px 0;
+    padding: 14px 0;
     border-top: 1px solid var(--line);
   }
   .thumb, .no-photo {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
     min-height: 0;
     padding: 0;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 10px;
+    background: var(--field);
   }
   .thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .no-photo {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px dashed var(--muted);
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     text-align: center;
   }
-  .reading-info strong { display: block; }
-  .reading-info .value { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; }
-  .reading-info small { display: block; color: var(--muted); font-size: 0.8125rem; }
-  .reading-tools { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
-  .reading-tools button { padding: 8px 12px; font-size: 0.875rem; }
+  .reading-info strong { display: block; font-weight: 500; }
+  .reading-info .value { font-family: var(--mono); }
+  .reading-info small { display: block; color: var(--muted); font-size: 0.75rem; }
+  .reading-tools { grid-column: 2; display: flex; flex-wrap: wrap; gap: 0 16px; }
+  .reading-tools button { min-height: 40px; padding: 0; background: none; border-radius: 0; font-size: 0.8125rem; font-weight: 400; color: var(--muted); }
+  .reading-tools button:hover { color: var(--ink); opacity: 1; }
 
   dialog {
     width: min(92vw, 860px);
-    padding: 14px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    padding: 16px;
+    background: var(--bg);
+    border: 0;
+    border-radius: 16px;
     color: var(--ink);
   }
-  dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
-  dialog img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; }
-  dialog p { margin: 10px 0; color: var(--muted); font-size: 0.875rem; }
-  .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+  dialog img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: 8px; }
+  dialog p { margin: 12px 0; color: var(--muted); font-size: 0.8125rem; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
   .button-link {
     display: flex;
     align-items: center;
-    min-height: 44px;
-    padding: 8px 14px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
+    min-height: 46px;
+    padding: 8px 16px;
+    background: var(--field);
+    border-radius: 10px;
     color: inherit;
+    font-weight: 500;
     text-decoration: none;
   }
 </style>
@@ -295,9 +291,8 @@
 <div class="wrap">
   <header>
     <h1>Submeter Bill Split</h1>
-    <p>One Meralco bill, split by submeter.</p>
     <nav class="tabs" aria-label="Pages">
-      <a href="#bill" id="navBill">Bill</a>
+      <a href="#bills" id="navBill">Bill</a>
       <a href="#readings" id="navReadings">Readings</a>
     </nav>
   </header>
@@ -434,7 +429,7 @@
         </div>
         <div>
           <p class="hint">Bills, readings and photos stay only in this browser on this device. They are not uploaded anywhere. Download a backup regularly to keep them safe or move them to another device.</p>
-          <div class="file-buttons" style="margin-top:10px">
+          <div class="file-buttons">
             <button type="button" id="exportBtn">Download backup</button>
             <button type="button" id="importBtn">Restore backup</button>
             <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -1226,7 +1221,7 @@
       tools.className = 'reading-tools';
       tools.appendChild(toolButton('Open bill', 'Open bill for ' + periodLabel(r.period), function () {
         selectPeriod(r.period);
-        location.hash = 'bill';
+        location.hash = 'bills';
       }));
       tools.appendChild(toolButton('Edit', 'Edit reading for ' + periodLabel(r.period), function () {
         selectReadingPeriod(r.period);
