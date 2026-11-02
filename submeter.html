@@ -279,16 +279,6 @@
   dialog img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; }
   dialog p { margin: 10px 0; color: var(--muted); font-size: 0.875rem; }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
-  .account { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
-  .sync { margin: 12px 0 0; }
-  .login { max-width: 420px; margin: 0 auto; }
-  .login .field { margin-bottom: 12px; }
-  .login .primary { width: 100%; }
-  .login-message { margin: 0 0 12px; overflow-wrap: anywhere; }
-  .log-entry { padding: 10px 0; border-top: 1px solid var(--line); }
-  .log-entry strong { display: block; font-weight: 600; }
-  .log-entry small { display: block; color: var(--muted); font-size: 0.8125rem; }
-  .log-entry .link-button { margin-top: 4px; font-size: 0.875rem; }
   .button-link {
     display: flex;
     align-items: center;
@@ -306,30 +296,12 @@
   <header>
     <h1>Submeter Bill Split</h1>
     <p>One Meralco bill, split by submeter.</p>
-    <nav class="tabs" id="tabs" aria-label="Pages">
+    <nav class="tabs" aria-label="Pages">
       <a href="#bill" id="navBill">Bill</a>
       <a href="#readings" id="navReadings">Readings</a>
-      <a href="#history" id="navHistory" hidden>History</a>
     </nav>
-    <div class="account" id="account" hidden>
-      <span id="accountName"></span>
-      <span id="syncState"></span>
-      <button type="button" class="link-button" id="syncBtn">Sync now</button>
-    </div>
-    <p class="alert warn sync" id="syncStatus" role="status" hidden></p>
   </header>
 
-  <section class="card login" id="viewLogin" hidden>
-    <p class="login-message" id="loginMessage"></p>
-    <form id="loginForm">
-      <h2>Connect this device</h2>
-      <label class="field"><span>Device name, shown in the history</span><input id="loginDevice" maxlength="40" placeholder="Kevin's phone" autocomplete="off"></label>
-      <label class="field"><span>Sync code, shown in the server window on the PC</span><input id="loginPin" inputmode="numeric" maxlength="12" autocomplete="off"></label>
-      <button type="submit" class="primary" id="loginBtn">Connect</button>
-    </form>
-  </section>
-
-  <div id="app">
   <div id="viewBill">
   <div class="layout">
     <form class="card" id="form" novalidate autocomplete="off">
@@ -452,15 +424,6 @@
     </div>
   </div>
 
-  <div id="viewHistory" hidden>
-    <section class="card" aria-labelledby="logTitle">
-      <h2 id="logTitle">Change history</h2>
-      <p class="hint">Every change that reached the PC, with the PC's own time. Entries can't be edited or removed from here, and replaced or deleted photos stay available.</p>
-      <p class="empty" id="historyLogEmpty" hidden></p>
-      <ul class="history-list" id="historyLog"></ul>
-    </section>
-  </div>
-
   <section class="card history">
     <details>
       <summary>Names and backup</summary>
@@ -470,7 +433,7 @@
           <label class="field"><span>Submeter</span><input id="subName" maxlength="40"></label>
         </div>
         <div>
-          <p class="hint" id="backupHint">Bills, readings and photos stay only in this browser on this device. They are not uploaded anywhere. Download a backup regularly to keep them safe or move them to another device.</p>
+          <p class="hint">Bills, readings and photos stay only in this browser on this device. They are not uploaded anywhere. Download a backup regularly to keep them safe or move them to another device.</p>
           <div class="file-buttons" style="margin-top:10px">
             <button type="button" id="exportBtn">Download backup</button>
             <button type="button" id="importBtn">Restore backup</button>
@@ -481,7 +444,6 @@
       </div>
     </details>
   </section>
-  </div>
 </div>
 
 <dialog id="photoDialog" aria-labelledby="photoCaption">
@@ -501,13 +463,7 @@
   var DEFAULT_RATE = 15;
   var READING_DAY = '26';
   var PHOTO_MAX_SIZE = 1600;
-  var PHOTO_MAX_BYTES = 900 * 1024; // Keeps uploads quick on a weak signal.
-  var SYNC_KEY = 'submeter-sync-v1';
-
-  // server.py switches these on when it serves this page. Opened any other way,
-  // such as from GitHub Pages, the app keeps everything in this browser only.
-  var SYNC_SERVER = false;
-  var APP_VERSION = 'dev';
+  var PHOTO_MAX_BYTES = 900 * 1024; // Keeps browser storage small.
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'];
 
@@ -521,10 +477,7 @@
     'navBill', 'navReadings', 'viewBill', 'viewReadings', 'readReminder', 'readForm', 'readFormTitle',
     'readMonth', 'readYear', 'readDate', 'readValue', 'readCheck', 'readAlerts', 'photoPreview',
     'photoBtn', 'photoRemove', 'photoFile', 'readSave', 'readStatus', 'readEmpty', 'readList',
-    'photoDialog', 'photoLarge', 'photoCaption', 'photoDownload', 'photoClose', 'tabs', 'account',
-    'accountName', 'syncState', 'syncBtn', 'syncStatus', 'viewLogin', 'loginMessage', 'loginForm',
-    'loginDevice', 'loginPin', 'loginBtn', 'app', 'backupHint', 'navHistory', 'viewHistory',
-    'historyLog', 'historyLogEmpty'
+    'photoDialog', 'photoLarge', 'photoCaption', 'photoDownload', 'photoClose'
   ].forEach(function (id) { el[id] = $(id); });
 
   var state = { bills: [], readings: [], rate: DEFAULT_RATE, mainName: 'Main house', subName: 'Submeter' };
@@ -537,11 +490,6 @@
   var dialogUrl = null;
   var thumbUrls = [];
   var readRenderId = 0;
-  var sync = null;
-  var started = false;
-  var billDirty = false;
-  var readDirty = false;
-  var settingsTimer = null;
 
   function loadState() {
     try {
@@ -558,32 +506,6 @@
       return false;
     }
   }
-
-  // Every save lands on this device first, then joins the queue for the PC.
-  function saveDoc(collection, id, data) {
-    var ok = persist();
-    if (sync) enqueue(collection, id, 'set', data);
-    return ok;
-  }
-
-  function removeDoc(collection, id) {
-    var ok = persist();
-    if (sync) enqueue(collection, id, 'delete', null);
-    return ok;
-  }
-
-  function saveSettings() {
-    var ok = persist();
-    if (sync) {
-      clearTimeout(settingsTimer);
-      settingsTimer = setTimeout(function () {
-        enqueue('settings', 'shared', 'set', { rate: state.rate, mainName: state.mainName, subName: state.subName });
-      }, 600);
-    }
-    return ok;
-  }
-
-  function who() { return sync ? sync.device : null; }
 
   function isAmount(v) { return typeof v === 'number' && isFinite(v) && v >= 0; }
 
@@ -609,14 +531,11 @@
     return {
       period: r.period, date: r.date, value: r.value, photo: r.photo === true,
       savedAt: typeof r.savedAt === 'string' ? r.savedAt : null,
-      editedAt: typeof r.editedAt === 'string' ? r.editedAt : null,
-      savedBy: typeof r.savedBy === 'string' ? r.savedBy : null,
-      editedBy: typeof r.editedBy === 'string' ? r.editedBy : null,
-      receivedAt: typeof r.receivedAt === 'string' ? r.receivedAt : null
+      editedAt: typeof r.editedAt === 'string' ? r.editedAt : null
     };
   }
 
-  // Shared by startup, Restore backup and sync, so bad data can't break rendering.
+  // Shared by startup and Restore backup, so bad data can't break rendering.
   function applyData(data) {
     if (Array.isArray(data.bills)) state.bills = data.bills.filter(validBill).map(cleanBill);
     if (Array.isArray(data.readings)) state.readings = data.readings.filter(validReading).map(cleanReading);
@@ -889,7 +808,6 @@
   function showPeriod() {
     var period = selectedPeriod();
     var saved = findBill(period);
-    billDirty = false;
     if (saved) {
       el.bill.value = saved.bill;
       el.totalKwh.value = saved.totalKwh === null ? '' : saved.totalKwh;
@@ -934,8 +852,7 @@
       state.bills.push(record);
     }
     state.rate = i.rate;
-    var ok = saveDoc('bills', i.period, record);
-    if (sync) saveSettings();
+    var ok = persist();
     renderHistory();
     showPeriod();
     setStatus(ok
@@ -1011,7 +928,7 @@
       box.checked = b.paid;
       box.addEventListener('change', function () {
         b.paid = box.checked;
-        saveDoc('bills', b.period, b);
+        persist();
       });
       paid.appendChild(box);
       paid.appendChild(document.createTextNode('Paid'));
@@ -1024,7 +941,7 @@
       remove.addEventListener('click', function () {
         if (!window.confirm('Delete the ' + periodLabel(b.period) + ' bill?')) return;
         state.bills.splice(state.bills.indexOf(b), 1);
-        removeDoc('bills', b.period);
+        persist();
         renderHistory();
         if (selectedPeriod() === b.period) showingSaved = false;
         render();
@@ -1078,33 +995,9 @@
     });
   }
 
-  function localPhoto(period) { return photoTx('readonly', function (s) { return s.get(period); }); }
-
-  // A photo saved from another device downloads from the PC the first time it's shown.
-  function getPhoto(period) {
-    return localPhoto(period).then(function (blob) {
-      if (blob || !sync) return blob;
-      return api('/api/photos/' + period, {}, 60000).then(function (response) {
-        return response.blob();
-      }).then(function (downloaded) {
-        return photoTx('readwrite', function (s) { return s.put(downloaded, period); }).then(function () {
-          return downloaded;
-        });
-      });
-    });
-  }
-
-  function putPhoto(period, blob) {
-    return photoTx('readwrite', function (s) { return s.put(blob, period); }).then(function () {
-      if (sync) enqueue('photos', period, 'set', null);
-    });
-  }
-
-  function deletePhoto(period) {
-    return photoTx('readwrite', function (s) { return s.delete(period); }).then(function () {
-      if (sync) enqueue('photos', period, 'delete', null);
-    });
-  }
+  function getPhoto(period) { return photoTx('readonly', function (s) { return s.get(period); }); }
+  function putPhoto(period, blob) { return photoTx('readwrite', function (s) { return s.put(blob, period); }); }
+  function deletePhoto(period) { return photoTx('readwrite', function (s) { return s.delete(period); }); }
 
   function shrinkPhoto(file) {
     return new Promise(function (resolve, reject) {
@@ -1148,7 +1041,6 @@
     var record = findReading(period);
     pendingPhoto = null;
     removePhoto = false;
-    readDirty = false;
     el.readDate.value = record ? record.date : period + '-' + READING_DAY;
     el.readValue.value = record ? record.value : '';
     el.readFormTitle.textContent = record ? 'Edit reading' : 'Save a reading';
@@ -1200,8 +1092,7 @@
     var photoWork = Promise.resolve(existing ? existing.photo : false);
     var record = {
       period: period, date: el.readDate.value, value: readNumber(el.readValue), photo: false,
-      savedAt: existing && existing.savedAt ? existing.savedAt : now, editedAt: existing ? now : null,
-      savedBy: existing ? existing.savedBy : who(), editedBy: existing ? who() : null
+      savedAt: existing && existing.savedAt ? existing.savedAt : now, editedAt: existing ? now : null
     };
 
     if (pendingPhoto) {
@@ -1225,7 +1116,7 @@
       } else {
         state.readings.push(record);
       }
-      var ok = saveDoc('readings', period, record);
+      var ok = persist();
       renderReadings();
       setYears();
       showPeriod();
@@ -1266,8 +1157,6 @@
     el.readReminder.hidden = !due;
     if (due) el.readReminder.textContent = 'Reading day is the 26th. No reading is saved for ' + periodLabel(period) + ' yet.';
   }
-
-  function byLine(device) { return device ? ' by ' + device : ''; }
 
   function toolButton(text, label, handler) {
     var button = document.createElement('button');
@@ -1329,15 +1218,8 @@
       info.appendChild(detail);
       if (r.savedAt) {
         var stamp = document.createElement('small');
-        stamp.textContent = 'Saved ' + dateTime(r.savedAt) + byLine(r.savedBy) +
-          (r.editedAt ? ' · Edited ' + dateTime(r.editedAt) + byLine(r.editedBy) : '');
+        stamp.textContent = 'Saved ' + dateTime(r.savedAt) + (r.editedAt ? ' · Edited ' + dateTime(r.editedAt) : '');
         info.appendChild(stamp);
-      }
-      if (sync) {
-        var received = document.createElement('small');
-        var isPending = sync.outbox.some(function (op) { return op.collection === 'readings' && op.id === r.period; });
-        received.textContent = !isPending && r.receivedAt ? 'Recorded on the PC ' + dateTime(r.receivedAt) : 'Waiting to reach the PC';
-        info.appendChild(received);
       }
 
       var tools = document.createElement('div');
@@ -1353,7 +1235,7 @@
       tools.appendChild(toolButton('Delete', 'Delete reading for ' + periodLabel(r.period), function () {
         if (!window.confirm('Delete the ' + name + ' reading' + (r.photo ? ' and its photo' : '') + '?')) return;
         state.readings.splice(state.readings.indexOf(r), 1);
-        removeDoc('readings', r.period);
+        persist();
         if (r.photo) deletePhoto(r.period).catch(function () { /* the record is gone, so the orphan is never shown */ });
         renderReadings();
         showPeriod();
@@ -1368,13 +1250,16 @@
   }
 
   function route() {
-    var page = location.hash === '#readings' ? 'Readings' : location.hash === '#history' && sync ? 'History' : 'Bill';
-    ['Bill', 'Readings', 'History'].forEach(function (name) {
-      el['view' + name].hidden = name !== page;
-      if (name === page) el['nav' + name].setAttribute('aria-current', 'page');
-      else el['nav' + name].removeAttribute('aria-current');
-    });
-    if (page === 'History') loadHistory();
+    var readings = location.hash === '#readings';
+    el.viewBill.hidden = readings;
+    el.viewReadings.hidden = !readings;
+    if (readings) {
+      el.navReadings.setAttribute('aria-current', 'page');
+      el.navBill.removeAttribute('aria-current');
+    } else {
+      el.navBill.setAttribute('aria-current', 'page');
+      el.navReadings.removeAttribute('aria-current');
+    }
     window.scrollTo(0, 0);
   }
 
@@ -1429,351 +1314,7 @@
     });
   }
 
-  function replaceSyncedPhotos(oldReadings, blobs) {
-    oldReadings.forEach(function (r) {
-      if (r.photo && !blobs[r.period]) deletePhoto(r.period);
-    });
-    return Promise.all(Object.keys(blobs).map(function (period) {
-      return putPhoto(period, blobs[period]);
-    }));
-  }
-
-  function replaceSyncedRecords(collection, oldList, newList) {
-    var kept = newList.map(function (item) { return item.period; });
-    oldList.forEach(function (item) {
-      if (kept.indexOf(item.period) === -1) removeDoc(collection, item.period);
-    });
-    newList.forEach(function (item) { saveDoc(collection, item.period, item); });
-  }
-
-  function loadSync() {
-    try {
-      return JSON.parse(localStorage.getItem(SYNC_KEY));
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function persistSync() {
-    try {
-      localStorage.setItem(SYNC_KEY, JSON.stringify({
-        device: sync.device, pin: sync.pin, lastRev: sync.lastRev, outbox: sync.outbox, sentOps: sync.sentOps
-      }));
-    } catch (e) { /* the queue still works until this page closes */ }
-  }
-
-  function enqueue(collection, id, action, data) {
-    sync.outbox.push({
-      opId: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12),
-      collection: collection, id: id, action: action, data: data,
-      device: sync.device, clientTime: new Date().toISOString()
-    });
-    persistSync();
-    showSyncState();
-    clearTimeout(sync.timer);
-    sync.timer = setTimeout(syncNow, 300);
-  }
-
-  function api(path, options, timeout) {
-    var controller = new AbortController();
-    var timer = setTimeout(function () { controller.abort(); }, timeout || 10000);
-    var settings = Object.assign({ signal: controller.signal }, options);
-    settings.headers = Object.assign({ 'X-Sync-Pin': sync.pin }, settings.headers);
-    return fetch(path, settings).then(function (response) {
-      clearTimeout(timer);
-      if (!response.ok) {
-        var error = new Error('Server said ' + response.status);
-        error.status = response.status;
-        throw error;
-      }
-      return response;
-    }, function (error) {
-      clearTimeout(timer);
-      throw error;
-    });
-  }
-
-  function sendOp(op) {
-    var ready = Promise.resolve(op);
-    if (op.collection === 'photos' && op.action === 'set') {
-      // Sends the newest photo for that month, which may be newer than this queued change.
-      ready = localPhoto(op.id).then(function (blob) {
-        if (!blob) return null;
-        return blobToDataUrl(blob).then(function (url) {
-          return Object.assign({}, op, { photo: { type: blob.type || 'image/jpeg', data: url.split(',')[1] } });
-        });
-      });
-    }
-    return ready.then(function (body) {
-      if (!body) return null;
-      return api('/api/op', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      }, 60000);
-    });
-  }
-
-  function sendOutbox() {
-    if (!sync.outbox.length) return Promise.resolve();
-    var op = sync.outbox[0];
-    var finish = function () {
-      sync.outbox = sync.outbox.filter(function (queued) { return queued.opId !== op.opId; });
-      sync.sentOps.push(op.opId);
-      sync.sentOps = sync.sentOps.slice(-200);
-      persistSync();
-      showSyncState();
-      return sendOutbox();
-    };
-    return sendOp(op).then(finish, function (error) {
-      // The server refused this change outright, so retrying can't help. Don't block the rest.
-      if (error.status === 400 || error.status === 413) {
-        showSync('The PC refused a change to ' + op.collection + ' for ' + op.id + ', so it was not recorded.');
-        return finish();
-      }
-      throw error;
-    });
-  }
-
-  function applyChange(change) {
-    var pending = sync.outbox.some(function (op) {
-      return op.collection === change.collection && op.id === change.id;
-    });
-    if (pending) return Promise.resolve();
-
-    if (change.collection === 'settings') {
-      if (!change.deleted && change.data) applyData(change.data);
-    } else if (change.collection === 'bills') {
-      state.bills = state.bills.filter(function (b) { return b.period !== change.id; });
-      if (!change.deleted && validBill(change.data)) state.bills.push(cleanBill(change.data));
-    } else if (change.collection === 'readings') {
-      state.readings = state.readings.filter(function (r) { return r.period !== change.id; });
-      if (!change.deleted && validReading(change.data)) state.readings.push(cleanReading(change.data));
-    } else if (change.collection === 'photos' && sync.sentOps.indexOf(change.opId) === -1) {
-      // Another device changed this photo. The new one downloads the next time it's shown.
-      return photoTx('readwrite', function (s) { return s.delete(change.id); });
-    }
-    return Promise.resolve();
-  }
-
-  function pullChanges() {
-    return api('/api/changes?since=' + sync.lastRev).then(function (response) {
-      return response.json();
-    }).then(function (result) {
-      return result.changes.reduce(function (chain, change) {
-        return chain.then(function () { return applyChange(change); });
-      }, Promise.resolve()).then(function () {
-        sync.lastRev = result.rev;
-        persistSync();
-        if (result.changes.length) {
-          persist();
-          if (started) refresh();
-        }
-        checkAppVersion(result.appVersion);
-      });
-    });
-  }
-
-  // The page is cached so it opens while the PC is off, so newer versions need fetching on purpose.
-  function checkAppVersion(version) {
-    if (version === APP_VERSION) {
-      try { sessionStorage.removeItem('submeter-updating'); } catch (e) { /* nothing to clear */ }
-      return;
-    }
-    try {
-      if (sessionStorage.getItem('submeter-updating')) return;
-      sessionStorage.setItem('submeter-updating', '1');
-    } catch (e) {
-      return;
-    }
-    fetch(location.pathname, { cache: 'reload' }).then(function () {
-      if (!billDirty && !readDirty && !pendingPhoto) location.reload();
-    }).catch(function () { /* tries again next time */ });
-  }
-
-  function syncNow() {
-    if (!sync || sync.paused) return Promise.resolve();
-    if (sync.running) {
-      sync.again = true;
-      return Promise.resolve();
-    }
-    sync.running = true;
-    return sendOutbox().then(pullChanges).then(function () {
-      sync.reachable = true;
-      sync.lastSynced = new Date().toISOString();
-    }, function (error) {
-      sync.reachable = false;
-      if (error.status === 401) {
-        sync.paused = true;
-        sync.pin = '';
-        persistSync();
-        showPairing('The sync code has changed. Enter the code shown on the PC. Nothing saved on this device was lost.');
-      }
-    }).then(function () {
-      sync.running = false;
-      showSyncState();
-      if (sync.again) {
-        sync.again = false;
-        syncNow();
-      }
-    });
-  }
-
-  function showSyncState() {
-    var waiting = sync.outbox.length;
-    el.syncState.textContent = sync.reachable === false
-      ? 'PC not reachable' + (waiting ? ', ' + waiting + ' change(s) saved here and waiting' : ', showing what is saved here')
-      : waiting
-        ? waiting + ' change(s) uploading'
-        : sync.reachable ? 'All saved on the PC' : 'Connecting...';
-  }
-
-  function showSync(text) {
-    el.syncStatus.hidden = !text;
-    el.syncStatus.textContent = text || '';
-  }
-
-  function showPairing(message) {
-    el.viewLogin.hidden = false;
-    el.app.hidden = true;
-    el.tabs.hidden = true;
-    el.account.hidden = true;
-    el.loginMessage.hidden = !message;
-    el.loginMessage.textContent = message || '';
-    el.loginDevice.value = (sync && sync.device) || '';
-    el.loginPin.value = '';
-  }
-
-  function submitPairing(event) {
-    event.preventDefault();
-    var device = el.loginDevice.value.trim();
-    var pin = el.loginPin.value.trim();
-    if (!device || !pin) {
-      el.loginMessage.hidden = false;
-      el.loginMessage.textContent = 'Enter both a device name and the sync code.';
-      return;
-    }
-    var saved = sync || {};
-    sync = {
-      device: device, pin: pin, lastRev: saved.lastRev || 0,
-      outbox: saved.outbox || [], sentOps: saved.sentOps || []
-    };
-    el.loginBtn.disabled = true;
-    api('/api/changes?since=0').then(function () {
-      persistSync();
-      el.loginBtn.disabled = false;
-      beginSync();
-    }, function (error) {
-      el.loginBtn.disabled = false;
-      el.loginMessage.hidden = false;
-      el.loginMessage.textContent = error.status === 401
-        ? 'That sync code is not correct. It is shown in the server window on the PC.'
-        : 'Could not reach the PC. Check that the server is running and this device is on the same Wi-Fi.';
-    });
-  }
-
-  function beginSync() {
-    el.accountName.textContent = 'This device: ' + sync.device;
-    el.account.hidden = false;
-    el.navHistory.hidden = false;
-    el.backupHint.textContent = 'Each device keeps its own copy and syncs it to the database on the PC. The PC also makes a daily backup by itself.';
-    if (started) {
-      el.viewLogin.hidden = true;
-      el.tabs.hidden = false;
-      el.app.hidden = false;
-      renderReadings();
-    } else {
-      start();
-    }
-    showSyncState();
-    syncNow();
-    if (!beginSync.scheduled) {
-      beginSync.scheduled = true;
-      setInterval(syncNow, 30000);
-      window.addEventListener('online', syncNow);
-      document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) syncNow();
-      });
-    }
-  }
-
-  function historyText(entry) {
-    var data = entry.data || {};
-    var month = /^\d{4}-\d{2}$/.test(entry.doc_id) ? periodLabel(entry.doc_id) : '';
-    var removed = entry.action === 'delete';
-    if (entry.collection === 'readings') {
-      return removed ? 'Deleted the ' + month + ' reading' : 'Saved the ' + month + ' reading: ' + num(Number(data.value));
-    }
-    if (entry.collection === 'bills') {
-      return removed ? 'Deleted the ' + month + ' bill' : 'Saved the ' + month + ' bill: ' + peso(Number(data.bill)) + (data.paid ? ', marked paid' : '');
-    }
-    if (entry.collection === 'photos') return (removed ? 'Removed' : 'Added') + ' the ' + month + ' photo';
-    return 'Changed the rate or names';
-  }
-
-  function loadHistory() {
-    if (!sync) return;
-    el.historyLogEmpty.hidden = false;
-    el.historyLogEmpty.textContent = 'Loading...';
-    api('/api/history').then(function (response) {
-      return response.json();
-    }).then(function (result) {
-      el.historyLog.textContent = '';
-      el.historyLogEmpty.hidden = result.entries.length > 0;
-      el.historyLogEmpty.textContent = 'No changes have reached the PC yet.';
-      result.entries.forEach(function (entry) {
-        var li = document.createElement('li');
-        li.className = 'log-entry';
-        var what = document.createElement('strong');
-        what.textContent = historyText(entry);
-        var when = document.createElement('small');
-        when.textContent = dateTime(entry.received_at) + ' · ' + entry.device;
-        li.appendChild(what);
-        li.appendChild(when);
-        if (entry.photo_id) {
-          var view = document.createElement('button');
-          view.type = 'button';
-          view.className = 'link-button';
-          view.textContent = 'View this photo';
-          view.addEventListener('click', function () {
-            api('/api/photo-versions/' + entry.photo_id, {}, 60000).then(function (response) {
-              return response.blob();
-            }).then(function (blob) {
-              showPhoto(blob, historyText(entry) + ', ' + dateTime(entry.received_at), 'submeter-' + entry.doc_id + '-' + entry.photo_id + '.jpg');
-            }).catch(function () {
-              window.alert('This photo could not be opened. Check that the PC is reachable.');
-            });
-          });
-          li.appendChild(view);
-        }
-        el.historyLog.appendChild(li);
-      });
-    }).catch(function () {
-      el.historyLog.textContent = '';
-      el.historyLogEmpty.hidden = false;
-      el.historyLogEmpty.textContent = 'The history is kept on the PC, and the PC is not reachable right now.';
-    });
-  }
-
-  // Applies a change from another device without wiping what's being typed here.
-  function refresh() {
-    setYears();
-    renderHistory();
-    renderReadings();
-    if (billDirty) {
-      applyRecords(selectedPeriod(), findBill(selectedPeriod()));
-      render();
-    } else {
-      if (!showingSaved) el.rate.value = state.rate;
-      showPeriod();
-    }
-    if (!readDirty && !pendingPhoto && !removePhoto) loadReadingForm(); else checkReading();
-    if (document.activeElement !== el.mainName) el.mainName.value = state.mainName;
-    if (document.activeElement !== el.subName) el.subName.value = state.subName;
-  }
-
   function start() {
-    started = true;
     var thisMonth = todayISO().slice(0, 7);
     var latest = readingsNewestFirst()[0];
     // A bill arrives after the 26th, so open the newest reading that has no bill yet.
@@ -1790,9 +1331,6 @@
     el.mainName.value = state.mainName;
     el.subName.value = state.subName;
 
-    el.viewLogin.hidden = true;
-    el.tabs.hidden = false;
-    el.app.hidden = false;
     renderHistory();
     renderReadings();
     showPeriod();
@@ -1809,11 +1347,7 @@
         setStatus('That file is not a valid backup.', el.backupStatus);
         return;
       }
-      if (!window.confirm(sync
-        ? 'Replace the bills, readings and photos for everyone with this backup?'
-        : 'Replace the bills, readings and photos on this device with this backup?')) return;
-      var oldBills = state.bills;
-      var oldReadings = state.readings;
+      if (!window.confirm('Replace the bills, readings and photos on this device with this backup?')) return;
       state.bills = [];
       state.readings = [];
       applyData(data);
@@ -1825,26 +1359,15 @@
         r.photo = !!blob;
       });
 
-      // Held here because a sync can replace state while the photos are being stored.
-      var newBills = state.bills;
-      var newReadings = state.readings;
       var photosFailed = false;
-      var storePhotos = sync ? replaceSyncedPhotos(oldReadings, blobs) : photoTx('readwrite', function (store) {
+      photoTx('readwrite', function (store) {
         store.clear();
         Object.keys(blobs).forEach(function (period) { store.put(blobs[period], period); });
-      });
-      storePhotos.catch(function () {
+      }).catch(function () {
         photosFailed = true;
-        newReadings.forEach(function (r) { r.photo = false; });
+        state.readings.forEach(function (r) { r.photo = false; });
       }).then(function () {
-        state.bills = newBills;
-        state.readings = newReadings;
         persist();
-        if (sync) {
-          replaceSyncedRecords('bills', oldBills, newBills);
-          replaceSyncedRecords('readings', oldReadings, newReadings);
-          saveSettings();
-        }
         el.mainName.value = state.mainName;
         el.subName.value = state.subName;
         el.rate.value = state.rate;
@@ -1873,10 +1396,7 @@
 
     el.form.addEventListener('submit', function (e) { e.preventDefault(); });
     el.form.addEventListener('input', function (e) {
-      if (e.target !== el.month && e.target !== el.year) {
-        billDirty = true;
-        render();
-      }
+      if (e.target !== el.month && e.target !== el.year) render();
     });
     el.month.addEventListener('change', showPeriod);
     el.year.addEventListener('change', showPeriod);
@@ -1892,19 +1412,15 @@
     [['mainName', 'Main house'], ['subName', 'Submeter']].forEach(function (pair) {
       el[pair[0]].addEventListener('input', function () {
         state[pair[0]] = el[pair[0]].value.trim() || pair[1];
-        saveSettings();
+        persist();
         render();
         renderHistory();
       });
     });
 
     el.readForm.addEventListener('submit', function (e) { e.preventDefault(); });
-    [el.readDate, el.readValue].forEach(function (input) {
-      input.addEventListener('input', function () {
-        readDirty = true;
-        checkReading();
-      });
-    });
+    el.readDate.addEventListener('input', checkReading);
+    el.readValue.addEventListener('input', checkReading);
     el.readMonth.addEventListener('change', loadReadingForm);
     el.readYear.addEventListener('change', loadReadingForm);
     el.readSave.addEventListener('click', saveReading);
@@ -1936,39 +1452,16 @@
 
     // With the app open in two tabs, each picks up what the other saved instead of overwriting it.
     window.addEventListener('storage', function (event) {
-      if (event.key === STORAGE_KEY && started) {
-        loadState();
-        refresh();
-      } else if (event.key === SYNC_KEY && sync) {
-        var latest = loadSync();
-        if (latest) {
-          sync.outbox = latest.outbox || [];
-          sync.sentOps = latest.sentOps || [];
-          sync.lastRev = latest.lastRev || 0;
-          showSyncState();
-        }
-      }
+      if (event.key !== STORAGE_KEY) return;
+      loadState();
+      setYears();
+      renderHistory();
+      renderReadings();
+      render();
     });
 
-    // Everything saved on this device shows right away, whether or not the PC is on.
     loadState();
-    if (SYNC_SERVER) {
-      el.loginForm.addEventListener('submit', submitPairing);
-      el.syncBtn.addEventListener('click', syncNow);
-      var saved = loadSync();
-      if (saved && saved.device && saved.pin) {
-        sync = {
-          device: saved.device, pin: saved.pin, lastRev: saved.lastRev || 0,
-          outbox: saved.outbox || [], sentOps: saved.sentOps || []
-        };
-        beginSync();
-      } else {
-        sync = saved;
-        showPairing('');
-      }
-    } else {
-      start();
-    }
+    start();
   }
 
   init();
