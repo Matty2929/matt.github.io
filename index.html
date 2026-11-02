@@ -1,0 +1,1978 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submeter Bill Split</title>
+<meta name="description" content="Split the monthly Meralco bill between the main house and the submeter.">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191814" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c2410c'/%3E%3Cpath d='M18 4 8 18h7l-1 10 10-14h-7z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f3ec;
+    --surface: #fffdf8;
+    --ink: #1f1d19;
+    --muted: #68635a;
+    --line: #dfd9cc;
+    --input-bg: #ffffff;
+    --sub: #c2410c;
+    --sub-soft: #fbe9df;
+    --main: #0f6b64;
+    --main-soft: #dcefec;
+    --on-accent: #ffffff;
+    --meter-bg: #23211c;
+    --meter-ink: #f7c873;
+    --warn-bg: #fdf2d0;
+    --warn-ink: #6f4e00;
+    --error-bg: #fbe3e0;
+    --error-ink: #96231a;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191814;
+      --surface: #23211c;
+      --ink: #f2eee5;
+      --muted: #a9a398;
+      --line: #3b3830;
+      --input-bg: #1c1b17;
+      --sub: #f0894f;
+      --sub-soft: #40271a;
+      --main: #55c4b8;
+      --main-soft: #17352f;
+      --on-accent: #191814;
+      --meter-bg: #12110e;
+      --warn-bg: #3d3112;
+      --warn-ink: #f3d68a;
+      --error-bg: #431d19;
+      --error-ink: #f6b4ac;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 16px 56px; }
+
+  header { margin-bottom: 22px; }
+  h1 { margin: 0; font-size: 1.6rem; line-height: 1.2; letter-spacing: -0.01em; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  h2 { margin: 0 0 14px; font-size: 1.05rem; }
+
+  .layout { display: grid; gap: 18px; align-items: start; }
+  @media (min-width: 800px) {
+    .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .result { position: sticky; top: 16px; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  fieldset { border: 0; margin: 0 0 20px; padding: 0; min-width: 0; }
+  fieldset:last-of-type { margin-bottom: 0; }
+  legend { padding: 0; margin-bottom: 10px; font-weight: 650; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: block; min-width: 0; }
+  .field > span { display: block; margin-bottom: 4px; font-size: 0.875rem; color: var(--muted); }
+  .hint { margin: 8px 0 0; font-size: 0.8125rem; color: var(--muted); }
+
+  input, select, button { font: inherit; color: inherit; }
+  input, select {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--sub);
+    outline-offset: 1px;
+  }
+  input.meter {
+    background: var(--meter-bg);
+    border-color: var(--meter-bg);
+    color: var(--meter-ink);
+    font-family: var(--mono);
+    font-size: 1.15rem;
+    letter-spacing: 0.04em;
+  }
+  input.meter::placeholder { color: var(--meter-ink); opacity: 0.4; }
+
+  button {
+    min-height: 44px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  button.primary {
+    background: var(--sub);
+    border-color: var(--sub);
+    color: var(--on-accent);
+    font-weight: 650;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+
+  .eyebrow { margin: 0; font-size: 0.875rem; color: var(--muted); }
+  .amount {
+    margin: 0;
+    font-size: 2.5rem;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .amount.sub { color: var(--sub); }
+  .second { margin-top: 12px; }
+  .second .amount { font-size: 1.6rem; color: var(--main); }
+
+  .bar { display: flex; gap: 2px; height: 12px; margin: 18px 0 6px; border-radius: 6px; overflow: hidden; background: var(--line); }
+  .bar div { min-width: 2px; }
+  .bar .sub { background: var(--sub); }
+  .bar .main { background: var(--main); }
+  .bar-legend { display: flex; justify-content: space-between; gap: 12px; font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  dl { margin: 18px 0 0; border-top: 1px solid var(--line); }
+  dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  dt { color: var(--muted); font-size: 0.9375rem; }
+  dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 550; }
+
+  .note { margin: 14px 0 0; font-size: 0.9375rem; }
+  .alert { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; font-size: 0.9375rem; }
+  .alert.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .alert.error { background: var(--error-bg); color: var(--error-ink); }
+  .empty { margin: 0; color: var(--muted); }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .status { min-height: 1.5em; margin: 8px 0 0; font-size: 0.875rem; color: var(--muted); }
+
+  .history { margin-top: 18px; }
+  .history-list { list-style: none; margin: 0; padding: 0; }
+  .bill {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 6px 14px;
+    align-items: center;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .bill-month { background: none; border: 0; padding: 0; min-height: 44px; text-align: left; color: inherit; }
+  .bill-month strong { display: block; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+  .bill-month small { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .money small { display: block; font-size: 0.75rem; color: var(--muted); }
+  .money span { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .money.sub span { color: var(--sub); }
+  .money.main span { color: var(--main); }
+  .bill-tools { display: flex; align-items: center; gap: 8px; }
+  .paid { display: flex; align-items: center; gap: 6px; min-height: 44px; font-size: 0.875rem; cursor: pointer; }
+  .paid input { width: 20px; min-height: 20px; height: 20px; accent-color: var(--main); }
+  .remove { padding: 8px 10px; font-size: 0.875rem; color: var(--muted); }
+  @media (max-width: 560px) {
+    .bill { grid-template-columns: 1fr 1fr; }
+    .bill-month, .bill-tools { grid-column: 1 / -1; }
+    .bill-tools { justify-content: space-between; }
+    .amount { font-size: 2.1rem; }
+  }
+
+  summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 650; }
+  summary::before { content: "▸"; margin-right: 8px; color: var(--muted); }
+  details[open] summary::before { content: "▾"; }
+  .details-body { display: grid; gap: 16px; padding-top: 8px; }
+  .file-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .tabs { display: flex; gap: 8px; margin-top: 14px; }
+  .tabs a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .tabs a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+  input.meter[readonly] { opacity: 0.8; cursor: not-allowed; }
+  .hint a, .link-button { color: var(--sub); font-weight: 600; }
+  .link-button {
+    min-height: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    font-size: inherit;
+    text-decoration: underline;
+  }
+  .hint div + div { margin-top: 2px; }
+
+  .photo-preview {
+    display: block;
+    width: 100%;
+    max-height: 240px;
+    margin-bottom: 10px;
+    object-fit: contain;
+    background: var(--meter-bg);
+    border-radius: 8px;
+  }
+  #readSave { width: 100%; margin-top: 18px; }
+  .reminder { margin: 0 0 18px; }
+
+  .reading {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 10px 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+  }
+  .thumb, .no-photo {
+    width: 72px;
+    height: 72px;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  .thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .no-photo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--muted);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-align: center;
+  }
+  .reading-info strong { display: block; }
+  .reading-info .value { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; }
+  .reading-info small { display: block; color: var(--muted); font-size: 0.8125rem; }
+  .reading-tools { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+  .reading-tools button { padding: 8px 12px; font-size: 0.875rem; }
+
+  dialog {
+    width: min(92vw, 860px);
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+  dialog img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; }
+  dialog p { margin: 10px 0; color: var(--muted); font-size: 0.875rem; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .account { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
+  .sync { margin: 12px 0 0; }
+  .login { max-width: 420px; margin: 0 auto; }
+  .login .field { margin-bottom: 12px; }
+  .login .primary { width: 100%; }
+  .login-message { margin: 0 0 12px; overflow-wrap: anywhere; }
+  .log-entry { padding: 10px 0; border-top: 1px solid var(--line); }
+  .log-entry strong { display: block; font-weight: 600; }
+  .log-entry small { display: block; color: var(--muted); font-size: 0.8125rem; }
+  .log-entry .link-button { margin-top: 4px; font-size: 0.875rem; }
+  .button-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Submeter Bill Split</h1>
+    <p>One Meralco bill, split by submeter.</p>
+    <nav class="tabs" id="tabs" aria-label="Pages">
+      <a href="#bill" id="navBill">Bill</a>
+      <a href="#readings" id="navReadings">Readings</a>
+      <a href="#history" id="navHistory" hidden>History</a>
+    </nav>
+    <div class="account" id="account" hidden>
+      <span id="accountName"></span>
+      <span id="syncState"></span>
+      <button type="button" class="link-button" id="syncBtn">Sync now</button>
+    </div>
+    <p class="alert warn sync" id="syncStatus" role="status" hidden></p>
+  </header>
+
+  <section class="card login" id="viewLogin" hidden>
+    <p class="login-message" id="loginMessage"></p>
+    <form id="loginForm">
+      <h2>Connect this device</h2>
+      <label class="field"><span>Device name, shown in the history</span><input id="loginDevice" maxlength="40" placeholder="Kevin's phone" autocomplete="off"></label>
+      <label class="field"><span>Sync code, shown in the server window on the PC</span><input id="loginPin" inputmode="numeric" maxlength="12" autocomplete="off"></label>
+      <button type="submit" class="primary" id="loginBtn">Connect</button>
+    </form>
+  </section>
+
+  <div id="app">
+  <div id="viewBill">
+  <div class="layout">
+    <form class="card" id="form" novalidate autocomplete="off">
+      <fieldset>
+        <legend>Billing month</legend>
+        <div class="row">
+          <label class="field"><span>Month</span><select id="month"></select></label>
+          <label class="field"><span>Year</span><select id="year"></select></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Meralco bill</legend>
+        <div class="row">
+          <label class="field"><span>Current charges (₱)</span><input id="bill" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></label>
+          <label class="field"><span>Total kWh used</span><input id="totalKwh" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+        </div>
+        <p class="hint">Use this month's charges only. Leave out any unpaid balance from past months.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Submeter reading</legend>
+        <div class="row">
+          <label class="field"><span>Previous</span><input class="meter" id="previous" type="number" inputmode="decimal" min="0" step="any" placeholder="00000"></label>
+          <label class="field"><span>Current</span><input class="meter" id="current" type="number" inputmode="decimal" min="0" step="any" placeholder="00000"></label>
+        </div>
+        <div class="hint" id="previousHint"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Submeter rate</legend>
+        <label class="field"><span>Price per kWh (₱)</span><input id="rate" type="number" inputmode="decimal" min="0" step="0.01"></label>
+      </fieldset>
+    </form>
+
+    <section class="card result" aria-labelledby="resultTitle" aria-live="polite">
+      <h2 id="resultTitle">This month's split</h2>
+      <div id="alerts"></div>
+      <p class="empty" id="empty">Enter the bill amount and both submeter readings to see who pays what.</p>
+
+      <div id="output" hidden>
+        <p class="eyebrow" id="subLabel"></p>
+        <p class="amount sub" id="subAmount"></p>
+        <div class="second">
+          <p class="eyebrow" id="mainLabel"></p>
+          <p class="amount" id="mainAmount"></p>
+        </div>
+
+        <div class="bar" aria-hidden="true"><div class="sub" id="barSub"></div><div class="main" id="barMain"></div></div>
+        <div class="bar-legend"><span id="legendSub"></span><span id="legendMain"></span></div>
+
+        <dl>
+          <div><dt>Submeter usage</dt><dd id="subUsage"></dd></div>
+          <div id="mainUsageRow"><dt>Main house usage</dt><dd id="mainUsage"></dd></div>
+          <div><dt>Meralco total</dt><dd id="billTotal"></dd></div>
+          <div id="meralcoRateRow"><dt>Meralco's rate this month</dt><dd id="meralcoRate"></dd></div>
+        </dl>
+        <p class="note" id="rateNote" hidden></p>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="primary" id="save" disabled>Save bill</button>
+        <button type="button" id="copy" disabled>Copy message</button>
+      </div>
+      <p class="status" id="status" role="status"></p>
+    </section>
+  </div>
+
+  <section class="card history" aria-labelledby="historyTitle">
+    <h2 id="historyTitle">Saved bills</h2>
+    <p class="empty" id="historyEmpty">No bills saved yet. Saved bills fill in next month's previous reading for you.</p>
+    <ul class="history-list" id="historyList"></ul>
+  </section>
+  </div>
+
+  <div id="viewReadings" hidden>
+    <p class="alert warn reminder" id="readReminder" hidden></p>
+    <div class="layout">
+      <form class="card" id="readForm" novalidate autocomplete="off">
+        <h2 id="readFormTitle">Save a reading</h2>
+        <fieldset>
+          <legend>Reading month</legend>
+          <div class="row">
+            <label class="field"><span>Month</span><select id="readMonth"></select></label>
+            <label class="field"><span>Year</span><select id="readYear"></select></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Submeter reading</legend>
+          <div class="row">
+            <label class="field"><span>Date read</span><input id="readDate" type="date"></label>
+            <label class="field"><span>Reading (kWh)</span><input class="meter" id="readValue" type="number" inputmode="decimal" min="0" step="any" placeholder="00000"></label>
+          </div>
+          <p class="hint" id="readCheck" hidden></p>
+        </fieldset>
+
+        <div id="readAlerts"></div>
+
+        <fieldset>
+          <legend>Photo proof</legend>
+          <img class="photo-preview" id="photoPreview" alt="Selected submeter photo" hidden>
+          <div class="file-buttons">
+            <button type="button" id="photoBtn">Add photo</button>
+            <button type="button" id="photoRemove" hidden>Remove photo</button>
+            <input type="file" id="photoFile" accept="image/*" hidden>
+          </div>
+          <p class="hint">Take the photo close enough that the meter digits are easy to read.</p>
+        </fieldset>
+
+        <button type="button" class="primary" id="readSave" disabled>Save reading</button>
+        <p class="status" id="readStatus" role="status"></p>
+      </form>
+
+      <section class="card" aria-labelledby="readListTitle">
+        <h2 id="readListTitle">Reading record</h2>
+        <p class="empty" id="readEmpty">No readings saved yet. Save last month's reading too, so this month's usage can be worked out.</p>
+        <ul class="history-list" id="readList"></ul>
+      </section>
+    </div>
+  </div>
+
+  <div id="viewHistory" hidden>
+    <section class="card" aria-labelledby="logTitle">
+      <h2 id="logTitle">Change history</h2>
+      <p class="hint">Every change that reached the PC, with the PC's own time. Entries can't be edited or removed from here, and replaced or deleted photos stay available.</p>
+      <p class="empty" id="historyLogEmpty" hidden></p>
+      <ul class="history-list" id="historyLog"></ul>
+    </section>
+  </div>
+
+  <section class="card history">
+    <details>
+      <summary>Names and backup</summary>
+      <div class="details-body">
+        <div class="row">
+          <label class="field"><span>Main house</span><input id="mainName" maxlength="40"></label>
+          <label class="field"><span>Submeter</span><input id="subName" maxlength="40"></label>
+        </div>
+        <div>
+          <p class="hint" id="backupHint">Bills, readings and photos stay only in this browser on this device. They are not uploaded anywhere. Download a backup regularly to keep them safe or move them to another device.</p>
+          <div class="file-buttons" style="margin-top:10px">
+            <button type="button" id="exportBtn">Download backup</button>
+            <button type="button" id="importBtn">Restore backup</button>
+            <input type="file" id="importFile" accept="application/json,.json" hidden>
+          </div>
+          <p class="status" id="backupStatus" role="status"></p>
+        </div>
+      </div>
+    </details>
+  </section>
+  </div>
+</div>
+
+<dialog id="photoDialog" aria-labelledby="photoCaption">
+  <img id="photoLarge" alt="">
+  <p id="photoCaption"></p>
+  <div class="dialog-actions">
+    <a class="button-link" id="photoDownload">Download</a>
+    <button type="button" id="photoClose">Close</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'submeter-bill-split-v1';
+  var DEFAULT_RATE = 15;
+  var READING_DAY = '26';
+  var PHOTO_MAX_SIZE = 1600;
+  var PHOTO_MAX_BYTES = 900 * 1024; // Keeps uploads quick on a weak signal.
+  var SYNC_KEY = 'submeter-sync-v1';
+
+  // server.py switches these on when it serves this page. Opened any other way,
+  // such as from GitHub Pages, the app keeps everything in this browser only.
+  var SYNC_SERVER = false;
+  var APP_VERSION = 'dev';
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+    'August', 'September', 'October', 'November', 'December'];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = {};
+  ['form', 'month', 'year', 'bill', 'totalKwh', 'previous', 'current', 'rate', 'previousHint',
+    'alerts', 'empty', 'output', 'subLabel', 'subAmount', 'mainLabel', 'mainAmount', 'barSub',
+    'barMain', 'legendSub', 'legendMain', 'subUsage', 'mainUsageRow', 'mainUsage', 'billTotal',
+    'meralcoRateRow', 'meralcoRate', 'rateNote', 'save', 'copy', 'status', 'historyEmpty',
+    'historyList', 'mainName', 'subName', 'exportBtn', 'importBtn', 'importFile', 'backupStatus',
+    'navBill', 'navReadings', 'viewBill', 'viewReadings', 'readReminder', 'readForm', 'readFormTitle',
+    'readMonth', 'readYear', 'readDate', 'readValue', 'readCheck', 'readAlerts', 'photoPreview',
+    'photoBtn', 'photoRemove', 'photoFile', 'readSave', 'readStatus', 'readEmpty', 'readList',
+    'photoDialog', 'photoLarge', 'photoCaption', 'photoDownload', 'photoClose', 'tabs', 'account',
+    'accountName', 'syncState', 'syncBtn', 'syncStatus', 'viewLogin', 'loginMessage', 'loginForm',
+    'loginDevice', 'loginPin', 'loginBtn', 'app', 'backupHint', 'navHistory', 'viewHistory',
+    'historyLog', 'historyLogEmpty'
+  ].forEach(function (id) { el[id] = $(id); });
+
+  var state = { bills: [], readings: [], rate: DEFAULT_RATE, mainName: 'Main house', subName: 'Submeter' };
+  var showingSaved = false;
+  var current = null;
+  var pendingPhoto = null;
+  var removePhoto = false;
+  var photoBusy = false;
+  var previewUrl = null;
+  var dialogUrl = null;
+  var thumbUrls = [];
+  var readRenderId = 0;
+  var sync = null;
+  var started = false;
+  var billDirty = false;
+  var readDirty = false;
+  var settingsTimer = null;
+
+  function loadState() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (saved) applyData(saved);
+    } catch (e) { /* storage blocked or corrupt: start empty */ }
+  }
+
+  function persist() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Every save lands on this device first, then joins the queue for the PC.
+  function saveDoc(collection, id, data) {
+    var ok = persist();
+    if (sync) enqueue(collection, id, 'set', data);
+    return ok;
+  }
+
+  function removeDoc(collection, id) {
+    var ok = persist();
+    if (sync) enqueue(collection, id, 'delete', null);
+    return ok;
+  }
+
+  function saveSettings() {
+    var ok = persist();
+    if (sync) {
+      clearTimeout(settingsTimer);
+      settingsTimer = setTimeout(function () {
+        enqueue('settings', 'shared', 'set', { rate: state.rate, mainName: state.mainName, subName: state.subName });
+      }, 600);
+    }
+    return ok;
+  }
+
+  function who() { return sync ? sync.device : null; }
+
+  function isAmount(v) { return typeof v === 'number' && isFinite(v) && v >= 0; }
+
+  function validBill(b) {
+    return b && typeof b.period === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(b.period) &&
+      isAmount(b.bill) && isAmount(b.previous) && isAmount(b.current) && isAmount(b.rate) &&
+      b.current >= b.previous && (b.totalKwh === null || isAmount(b.totalKwh));
+  }
+
+  function validReading(r) {
+    return r && typeof r.period === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(r.period) &&
+      typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && isAmount(r.value);
+  }
+
+  function cleanBill(b) {
+    return {
+      period: b.period, bill: b.bill, totalKwh: b.totalKwh, previous: b.previous,
+      current: b.current, rate: b.rate, paid: b.paid === true
+    };
+  }
+
+  function cleanReading(r) {
+    return {
+      period: r.period, date: r.date, value: r.value, photo: r.photo === true,
+      savedAt: typeof r.savedAt === 'string' ? r.savedAt : null,
+      editedAt: typeof r.editedAt === 'string' ? r.editedAt : null,
+      savedBy: typeof r.savedBy === 'string' ? r.savedBy : null,
+      editedBy: typeof r.editedBy === 'string' ? r.editedBy : null,
+      receivedAt: typeof r.receivedAt === 'string' ? r.receivedAt : null
+    };
+  }
+
+  // Shared by startup, Restore backup and sync, so bad data can't break rendering.
+  function applyData(data) {
+    if (Array.isArray(data.bills)) state.bills = data.bills.filter(validBill).map(cleanBill);
+    if (Array.isArray(data.readings)) state.readings = data.readings.filter(validReading).map(cleanReading);
+    if (isAmount(data.rate)) state.rate = data.rate;
+    if (typeof data.mainName === 'string' && data.mainName.trim()) state.mainName = data.mainName.slice(0, 40);
+    if (typeof data.subName === 'string' && data.subName.trim()) state.subName = data.subName.slice(0, 40);
+    // Older saves and backups stored the previous default name.
+    if (state.subName === 'Submeter family') state.subName = 'Submeter';
+  }
+
+  function round(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+
+  function peso(n) {
+    return (n < 0 ? '-₱' : '₱') + Math.abs(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function num(n) { return n.toLocaleString('en-PH', { maximumFractionDigits: 2 }); }
+
+  function kwh(n) { return num(n) + ' kWh'; }
+
+  function periodLabel(period) {
+    var parts = period.split('-');
+    return MONTHS[Number(parts[1]) - 1] + ' ' + parts[0];
+  }
+
+  function periodOf(month, year) {
+    return year.value + '-' + String(Number(month.value) + 1).padStart(2, '0');
+  }
+
+  function selectedPeriod() { return periodOf(el.month, el.year); }
+
+  function shortDate(iso) {
+    var parts = iso.split('-');
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      .toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function dateTime(iso) {
+    return new Date(iso).toLocaleString('en-PH', {
+      month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+  }
+
+  function todayISO() {
+    var now = new Date();
+    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+  }
+
+  function findReading(period) {
+    for (var i = 0; i < state.readings.length; i++) {
+      if (state.readings[i].period === period) return state.readings[i];
+    }
+    return null;
+  }
+
+  function readingsNewestFirst() {
+    return state.readings.slice().sort(function (a, b) { return a.period < b.period ? 1 : -1; });
+  }
+
+  function readingBefore(period) {
+    return readingsNewestFirst().filter(function (r) { return r.period < period; })[0] || null;
+  }
+
+  function readingAfter(period) {
+    return readingsNewestFirst().filter(function (r) { return r.period > period; }).pop() || null;
+  }
+
+  function readNumber(input) {
+    if (input.value.trim() === '') return null;
+    var n = Number(input.value);
+    return isFinite(n) ? n : null;
+  }
+
+  function findBill(period) {
+    for (var i = 0; i < state.bills.length; i++) {
+      if (state.bills[i].period === period) return state.bills[i];
+    }
+    return null;
+  }
+
+  function latestBefore(period) {
+    return state.bills
+      .filter(function (b) { return b.period < period; })
+      .sort(function (a, b) { return a.period < b.period ? 1 : -1; })[0] || null;
+  }
+
+  // Pure split: the submeter pays metered kWh x rate, the main house pays what's left.
+  function compute(input) {
+    var subKwh = round(input.current - input.previous);
+    var subAmount = round(subKwh * input.rate);
+    var result = {
+      subKwh: subKwh,
+      subAmount: subAmount,
+      mainAmount: round(input.bill - subAmount),
+      mainKwh: null,
+      meralcoRate: null
+    };
+    if (input.totalKwh) {
+      result.mainKwh = round(input.totalKwh - subKwh);
+      result.meralcoRate = input.bill / input.totalKwh;
+    }
+    return result;
+  }
+
+  function readForm() {
+    return {
+      period: selectedPeriod(),
+      bill: readNumber(el.bill),
+      totalKwh: readNumber(el.totalKwh),
+      previous: readNumber(el.previous),
+      current: readNumber(el.current),
+      rate: readNumber(el.rate)
+    };
+  }
+
+  function addAlert(kind, text, target) {
+    var p = document.createElement('p');
+    p.className = 'alert ' + kind;
+    p.textContent = text;
+    (target || el.alerts).appendChild(p);
+  }
+
+  function render() {
+    var input = readForm();
+    el.alerts.textContent = '';
+    current = null;
+
+    var negative = [input.bill, input.totalKwh, input.previous, input.current, input.rate]
+      .some(function (v) { return v !== null && v < 0; });
+    var complete = input.bill !== null && input.previous !== null && input.current !== null && input.rate !== null;
+    var backwards = input.previous !== null && input.current !== null && input.current < input.previous;
+
+    if (negative) addAlert('error', 'Amounts and readings cannot be negative.');
+    if (backwards) addAlert('error', 'The current reading is lower than the previous one. Check both numbers.');
+
+    if (!complete || negative || backwards) {
+      el.output.hidden = true;
+      el.empty.hidden = negative || backwards;
+      el.save.disabled = true;
+      el.copy.disabled = true;
+      return;
+    }
+
+    var r = compute(input);
+    current = { input: input, result: r };
+
+    if (r.mainKwh !== null && r.mainKwh < 0) {
+      addAlert('warn', 'The submeter used more kWh than the whole Meralco bill. Check the readings and total kWh. The submeter may also cover a different date range than the bill.');
+    }
+    if (r.mainAmount < 0) {
+      addAlert('warn', 'The submeter charge is bigger than the whole Meralco bill, so the main house amount is negative. Check the numbers.');
+    }
+    var savedBill = findBill(input.period);
+    if (savedBill && (el.previous.readOnly || el.current.readOnly) &&
+        (savedBill.previous !== input.previous || savedBill.current !== input.current)) {
+      addAlert('warn', 'The saved bill used readings ' + num(savedBill.previous) + ' to ' + num(savedBill.current) + ', which no longer match the reading record. Press Save bill to update it.');
+    }
+
+    el.empty.hidden = true;
+    el.output.hidden = false;
+    el.save.disabled = false;
+    el.copy.disabled = false;
+
+    el.subLabel.textContent = state.subName + ' pays';
+    el.subAmount.textContent = peso(r.subAmount);
+    el.mainLabel.textContent = state.mainName + ' pays';
+    el.mainAmount.textContent = peso(r.mainAmount);
+
+    var subShare = input.bill > 0 ? Math.min(Math.max(r.subAmount / input.bill, 0), 1) : 0;
+    el.barSub.style.flexGrow = subShare;
+    el.barMain.style.flexGrow = 1 - subShare;
+    el.legendSub.textContent = state.subName + ' ' + Math.round(subShare * 100) + '%';
+    el.legendMain.textContent = state.mainName + ' ' + (100 - Math.round(subShare * 100)) + '%';
+
+    el.subUsage.textContent = kwh(r.subKwh) + ' × ' + peso(input.rate);
+    el.mainUsageRow.hidden = r.mainKwh === null;
+    if (r.mainKwh !== null) el.mainUsage.textContent = kwh(r.mainKwh);
+    el.billTotal.textContent = peso(input.bill);
+    el.meralcoRateRow.hidden = r.meralcoRate === null;
+    if (r.meralcoRate !== null) el.meralcoRate.textContent = peso(r.meralcoRate) + ' / kWh';
+
+    el.rateNote.hidden = r.meralcoRate === null || r.subKwh === 0;
+    if (r.meralcoRate !== null) {
+      var diff = round(r.subKwh * (input.rate - r.meralcoRate));
+      if (Math.abs(diff) < 0.01) {
+        el.rateNote.textContent = 'The submeter rate matches Meralco\'s rate this month.';
+      } else if (diff > 0) {
+        el.rateNote.textContent = 'At ' + peso(input.rate) + ' per kWh, ' + state.subName + ' pays ' + peso(diff) + ' more than the usage cost at Meralco\'s rate, which lowers the ' + state.mainName + ' share.';
+      } else {
+        el.rateNote.textContent = 'At ' + peso(input.rate) + ' per kWh, ' + state.subName + ' pays ' + peso(-diff) + ' less than the usage cost at Meralco\'s rate, which raises the ' + state.mainName + ' share.';
+      }
+    }
+  }
+
+  function setStatus(text, target) {
+    var node = target || el.status;
+    node.textContent = text;
+    clearTimeout(node.statusTimer);
+    node.statusTimer = setTimeout(function () { node.textContent = ''; }, 5000);
+  }
+
+  function setYears(extra) {
+    var now = new Date().getFullYear();
+    var years = [now - 3, now - 2, now - 1, now, now + 1];
+    state.bills.concat(state.readings).forEach(function (b) { years.push(Number(b.period.slice(0, 4))); });
+    if (extra) years.push(extra);
+    var unique = years.filter(function (y, i) { return years.indexOf(y) === i; }).sort();
+    [el.year, el.readYear].forEach(function (select) {
+      var chosen = select.value;
+      select.textContent = '';
+      unique.forEach(function (y) {
+        var o = document.createElement('option');
+        o.value = o.textContent = String(y);
+        select.appendChild(o);
+      });
+      if (chosen) select.value = chosen;
+    });
+  }
+
+  function hintLine(text, period) {
+    var line = document.createElement('div');
+    line.textContent = text;
+    if (period) {
+      var view = document.createElement('button');
+      view.type = 'button';
+      view.className = 'link-button';
+      view.textContent = 'View photo';
+      view.addEventListener('click', function () { openPhoto(findReading(period)); });
+      line.appendChild(document.createTextNode(' '));
+      line.appendChild(view);
+    }
+    el.previousHint.appendChild(line);
+  }
+
+  // Readings on record fill the meter fields and lock them, so the bill always traces to a saved reading.
+  function applyRecords(period, saved) {
+    var record = findReading(period);
+    var before = readingBefore(period);
+    var billBefore = latestBefore(period);
+    var billNewer = billBefore && (!before || billBefore.period > before.period);
+    var useBefore = before && !billNewer;
+
+    el.previous.readOnly = !!useBefore;
+    el.current.readOnly = !!record;
+    if (useBefore) el.previous.value = before.value;
+    else if (billNewer && !saved) el.previous.value = billBefore.current;
+    if (record) el.current.value = record.value;
+
+    el.previousHint.textContent = '';
+    if (useBefore) {
+      hintLine('Previous: from the ' + shortDate(before.date) + ' reading.', before.photo ? before.period : null);
+    } else if (billNewer && !saved) {
+      hintLine('Previous: from the ' + periodLabel(billBefore.period) + ' bill.');
+    }
+    if (record) {
+      hintLine('Current: from the ' + shortDate(record.date) + ' reading.', record.photo ? record.period : null);
+    } else {
+      hintLine('No reading saved for ' + periodLabel(period) + ' yet.');
+    }
+    var link = document.createElement('a');
+    link.href = '#readings';
+    link.textContent = record ? 'Change readings' : 'Add it on the Readings page';
+    var line = document.createElement('div');
+    line.appendChild(link);
+    el.previousHint.appendChild(line);
+  }
+
+  // Keeps typed numbers when only the month changes; clears them when leaving a saved bill.
+  function showPeriod() {
+    var period = selectedPeriod();
+    var saved = findBill(period);
+    billDirty = false;
+    if (saved) {
+      el.bill.value = saved.bill;
+      el.totalKwh.value = saved.totalKwh === null ? '' : saved.totalKwh;
+      el.previous.value = saved.previous;
+      el.current.value = saved.current;
+      el.rate.value = saved.rate;
+      showingSaved = true;
+    } else if (showingSaved) {
+      el.bill.value = '';
+      el.totalKwh.value = '';
+      el.previous.value = '';
+      el.current.value = '';
+      el.rate.value = state.rate;
+      showingSaved = false;
+    } else {
+      if (el.previous.readOnly) el.previous.value = '';
+      if (el.current.readOnly) el.current.value = '';
+    }
+    applyRecords(period, saved);
+    render();
+  }
+
+  function selectPeriod(period) {
+    var parts = period.split('-');
+    setYears(Number(parts[0]));
+    el.year.value = parts[0];
+    el.month.value = String(Number(parts[1]) - 1);
+    showPeriod();
+  }
+
+  function saveBill() {
+    if (!current) return;
+    var i = current.input;
+    var existing = findBill(i.period);
+    var record = {
+      period: i.period, bill: i.bill, totalKwh: i.totalKwh, previous: i.previous,
+      current: i.current, rate: i.rate, paid: existing ? existing.paid : false
+    };
+    if (existing) {
+      state.bills[state.bills.indexOf(existing)] = record;
+    } else {
+      state.bills.push(record);
+    }
+    state.rate = i.rate;
+    var ok = saveDoc('bills', i.period, record);
+    if (sync) saveSettings();
+    renderHistory();
+    showPeriod();
+    setStatus(ok
+      ? (existing ? 'Updated ' : 'Saved ') + periodLabel(i.period) + '.'
+      : 'Could not save. This browser is blocking storage, so the bill will be lost when you close the page.');
+  }
+
+  function messageText() {
+    var i = current.input, r = current.result;
+    return [
+      'Meralco bill: ' + periodLabel(i.period),
+      'Submeter reading: ' + num(i.previous) + ' to ' + num(i.current) + ' (' + kwh(r.subKwh) + ')',
+      kwh(r.subKwh) + ' × ' + peso(i.rate) + ' per kWh',
+      'Amount to pay: ' + peso(r.subAmount)
+    ].join('\n');
+  }
+
+  function copyMessage() {
+    if (!current) return;
+    var text = messageText();
+    var done = function () { setStatus('Message copied. Paste it into your chat.'); };
+    var fallback = function () {
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { /* reported below */ }
+      document.body.removeChild(area);
+      if (ok) done(); else setStatus('Could not copy on this browser.');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function renderHistory() {
+    var list = el.historyList;
+    list.textContent = '';
+    el.historyEmpty.hidden = state.bills.length > 0;
+
+    state.bills.slice().sort(function (a, b) { return a.period < b.period ? 1 : -1; }).forEach(function (b) {
+      var r = compute(b);
+      var li = document.createElement('li');
+      li.className = 'bill';
+
+      var open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'bill-month';
+      var title = document.createElement('strong');
+      title.textContent = periodLabel(b.period);
+      var sub = document.createElement('small');
+      sub.textContent = num(b.previous) + ' to ' + num(b.current) + ' · ' + kwh(r.subKwh);
+      open.appendChild(title);
+      open.appendChild(sub);
+      open.addEventListener('click', function () {
+        selectPeriod(b.period);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      var tools = document.createElement('div');
+      tools.className = 'bill-tools';
+
+      var paid = document.createElement('label');
+      paid.className = 'paid';
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = b.paid;
+      box.addEventListener('change', function () {
+        b.paid = box.checked;
+        saveDoc('bills', b.period, b);
+      });
+      paid.appendChild(box);
+      paid.appendChild(document.createTextNode('Paid'));
+
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove';
+      remove.textContent = 'Delete';
+      remove.setAttribute('aria-label', 'Delete ' + periodLabel(b.period));
+      remove.addEventListener('click', function () {
+        if (!window.confirm('Delete the ' + periodLabel(b.period) + ' bill?')) return;
+        state.bills.splice(state.bills.indexOf(b), 1);
+        removeDoc('bills', b.period);
+        renderHistory();
+        if (selectedPeriod() === b.period) showingSaved = false;
+        render();
+      });
+
+      tools.appendChild(paid);
+      tools.appendChild(remove);
+
+      li.appendChild(open);
+      li.appendChild(moneyCell('sub', state.subName, r.subAmount));
+      li.appendChild(moneyCell('main', state.mainName, r.mainAmount));
+      li.appendChild(tools);
+      list.appendChild(li);
+    });
+  }
+
+  function moneyCell(kind, name, amount) {
+    var cell = document.createElement('div');
+    cell.className = 'money ' + kind;
+    var label = document.createElement('small');
+    label.textContent = name;
+    var value = document.createElement('span');
+    value.textContent = peso(amount);
+    cell.appendChild(label);
+    cell.appendChild(value);
+    return cell;
+  }
+
+  // Photos are too big for localStorage, so they live in IndexedDB, keyed by reading month.
+  function openDb() {
+    if (!openDb.promise) {
+      openDb.promise = new Promise(function (resolve, reject) {
+        if (!window.indexedDB) { reject(new Error('IndexedDB unavailable')); return; }
+        var request = indexedDB.open('submeter-bill-split', 1);
+        request.onupgradeneeded = function () { request.result.createObjectStore('photos'); };
+        request.onsuccess = function () { resolve(request.result); };
+        request.onerror = function () { reject(request.error); };
+      });
+    }
+    return openDb.promise;
+  }
+
+  function photoTx(mode, work) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('photos', mode);
+        var request = work(tx.objectStore('photos'));
+        tx.oncomplete = function () { resolve(request ? request.result : undefined); };
+        tx.onerror = tx.onabort = function () { reject(tx.error); };
+      });
+    });
+  }
+
+  function localPhoto(period) { return photoTx('readonly', function (s) { return s.get(period); }); }
+
+  // A photo saved from another device downloads from the PC the first time it's shown.
+  function getPhoto(period) {
+    return localPhoto(period).then(function (blob) {
+      if (blob || !sync) return blob;
+      return api('/api/photos/' + period, {}, 60000).then(function (response) {
+        return response.blob();
+      }).then(function (downloaded) {
+        return photoTx('readwrite', function (s) { return s.put(downloaded, period); }).then(function () {
+          return downloaded;
+        });
+      });
+    });
+  }
+
+  function putPhoto(period, blob) {
+    return photoTx('readwrite', function (s) { return s.put(blob, period); }).then(function () {
+      if (sync) enqueue('photos', period, 'set', null);
+    });
+  }
+
+  function deletePhoto(period) {
+    return photoTx('readwrite', function (s) { return s.delete(period); }).then(function () {
+      if (sync) enqueue('photos', period, 'delete', null);
+    });
+  }
+
+  function shrinkPhoto(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var attempt = function (scale, quality) {
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.naturalWidth * scale);
+          canvas.height = Math.round(img.naturalHeight * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) {
+            if (!blob) reject(new Error('Could not process photo'));
+            else if (blob.size <= PHOTO_MAX_BYTES) resolve(blob);
+            else if (canvas.width < 400) reject(new Error('Photo too large'));
+            else attempt(scale * 0.8, Math.max(0.6, quality - 0.1));
+          }, 'image/jpeg', quality);
+        };
+        attempt(Math.min(1, PHOTO_MAX_SIZE / Math.max(img.naturalWidth, img.naturalHeight)), 0.82);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('Could not open photo'));
+      };
+      img.src = url;
+    });
+  }
+
+  function setPreview(blob) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = blob ? URL.createObjectURL(blob) : null;
+    el.photoPreview.hidden = !blob;
+    if (blob) el.photoPreview.src = previewUrl; else el.photoPreview.removeAttribute('src');
+    el.photoBtn.textContent = blob ? 'Change photo' : 'Add photo';
+    el.photoRemove.hidden = !blob;
+  }
+
+  function loadReadingForm() {
+    var period = periodOf(el.readMonth, el.readYear);
+    var record = findReading(period);
+    pendingPhoto = null;
+    removePhoto = false;
+    readDirty = false;
+    el.readDate.value = record ? record.date : period + '-' + READING_DAY;
+    el.readValue.value = record ? record.value : '';
+    el.readFormTitle.textContent = record ? 'Edit reading' : 'Save a reading';
+    el.readSave.textContent = record ? 'Update reading' : 'Save reading';
+    setPreview(null);
+    if (record && record.photo) {
+      getPhoto(period).then(function (blob) {
+        if (blob && periodOf(el.readMonth, el.readYear) === period && !pendingPhoto && !removePhoto) setPreview(blob);
+      }).catch(function () {
+        setStatus('Could not load the saved photo.', el.readStatus);
+      });
+    }
+    checkReading();
+  }
+
+  function selectReadingPeriod(period) {
+    var parts = period.split('-');
+    setYears(Number(parts[0]));
+    el.readYear.value = parts[0];
+    el.readMonth.value = String(Number(parts[1]) - 1);
+    loadReadingForm();
+  }
+
+  function checkReading() {
+    var period = periodOf(el.readMonth, el.readYear);
+    var value = readNumber(el.readValue);
+    var before = readingBefore(period);
+    var after = readingAfter(period);
+    el.readAlerts.textContent = '';
+    el.readCheck.hidden = true;
+
+    if (value !== null && value < 0) addAlert('error', 'A reading cannot be negative.', el.readAlerts);
+    if (el.readDate.value > todayISO()) addAlert('warn', 'This date is in the future. Check it before saving.', el.readAlerts);
+    if (value !== null && before && value < before.value) {
+      addAlert('warn', 'This is lower than the ' + shortDate(before.date) + ' reading of ' + num(before.value) + '. Check the number.', el.readAlerts);
+    } else if (value !== null && after && value > after.value) {
+      addAlert('warn', 'This is higher than the ' + shortDate(after.date) + ' reading of ' + num(after.value) + '. Check the number.', el.readAlerts);
+    } else if (value !== null && before) {
+      el.readCheck.hidden = false;
+      el.readCheck.textContent = kwh(round(value - before.value)) + ' used since the ' + shortDate(before.date) + ' reading.';
+    }
+    el.readSave.disabled = value === null || value < 0 || !el.readDate.value || photoBusy;
+  }
+
+  function saveReading() {
+    var period = periodOf(el.readMonth, el.readYear);
+    var existing = findReading(period);
+    var now = new Date().toISOString();
+    var photoWork = Promise.resolve(existing ? existing.photo : false);
+    var record = {
+      period: period, date: el.readDate.value, value: readNumber(el.readValue), photo: false,
+      savedAt: existing && existing.savedAt ? existing.savedAt : now, editedAt: existing ? now : null,
+      savedBy: existing ? existing.savedBy : who(), editedBy: existing ? who() : null
+    };
+
+    if (pendingPhoto) {
+      photoWork = putPhoto(period, pendingPhoto).then(function () {
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+        return true;
+      });
+    } else if (removePhoto) {
+      photoWork = deletePhoto(period).then(function () { return false; });
+    }
+
+    el.readSave.disabled = true;
+    var photoFailed = false;
+    photoWork.catch(function () {
+      photoFailed = true;
+      return existing ? existing.photo : false;
+    }).then(function (hasPhoto) {
+      record.photo = hasPhoto;
+      if (existing) {
+        state.readings[state.readings.indexOf(existing)] = record;
+      } else {
+        state.readings.push(record);
+      }
+      var ok = saveDoc('readings', period, record);
+      renderReadings();
+      setYears();
+      showPeriod();
+      loadReadingForm();
+      setStatus(!ok
+        ? 'Could not save. This browser is blocking storage, so the reading will be lost when you close the page.'
+        : photoFailed
+          ? 'Reading saved, but the photo could not be stored. Try adding it again.'
+          : (existing ? 'Updated the ' : 'Saved the ') + shortDate(record.date) + ' reading' + (record.photo ? ' with photo.' : ' without a photo.'),
+        el.readStatus);
+    });
+  }
+
+  function showPhoto(blob, caption, filename) {
+    if (dialogUrl) URL.revokeObjectURL(dialogUrl);
+    dialogUrl = URL.createObjectURL(blob);
+    el.photoLarge.src = dialogUrl;
+    el.photoLarge.alt = 'Submeter photo: ' + caption;
+    el.photoCaption.textContent = caption;
+    el.photoDownload.href = dialogUrl;
+    el.photoDownload.download = filename;
+    el.photoDialog.showModal();
+  }
+
+  function openPhoto(record) {
+    getPhoto(record.period).then(function (blob) {
+      if (!blob) throw new Error('Photo missing');
+      showPhoto(blob, shortDate(record.date) + ' reading: ' + num(record.value), 'submeter-' + record.date + '.jpg');
+    }).catch(function () {
+      window.alert('This photo could not be opened on this device.');
+    });
+  }
+
+  function renderReminder() {
+    var today = todayISO();
+    var period = today.slice(0, 7);
+    var due = Number(today.slice(8)) >= Number(READING_DAY) && !findReading(period);
+    el.readReminder.hidden = !due;
+    if (due) el.readReminder.textContent = 'Reading day is the 26th. No reading is saved for ' + periodLabel(period) + ' yet.';
+  }
+
+  function byLine(device) { return device ? ' by ' + device : ''; }
+
+  function toolButton(text, label, handler) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    button.setAttribute('aria-label', label);
+    button.addEventListener('click', handler);
+    return button;
+  }
+
+  function renderReadings() {
+    var renderId = ++readRenderId;
+    thumbUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+    thumbUrls = [];
+    el.readList.textContent = '';
+    el.readEmpty.hidden = state.readings.length > 0;
+    renderReminder();
+
+    var sorted = readingsNewestFirst();
+    sorted.forEach(function (r, i) {
+      var older = sorted[i + 1];
+      var name = shortDate(r.date);
+      var li = document.createElement('li');
+      li.className = 'reading';
+
+      var slot;
+      if (r.photo) {
+        slot = document.createElement('button');
+        slot.type = 'button';
+        slot.className = 'thumb';
+        slot.setAttribute('aria-label', 'View photo for ' + name);
+        slot.addEventListener('click', function () { openPhoto(r); });
+        getPhoto(r.period).then(function (blob) {
+          if (!blob || renderId !== readRenderId) return;
+          var url = URL.createObjectURL(blob);
+          thumbUrls.push(url);
+          var img = document.createElement('img');
+          img.src = url;
+          img.alt = '';
+          slot.appendChild(img);
+        }).catch(function () { /* the thumbnail stays blank; opening it reports the problem */ });
+      } else {
+        slot = document.createElement('div');
+        slot.className = 'no-photo';
+        slot.textContent = 'No photo';
+      }
+
+      var info = document.createElement('div');
+      info.className = 'reading-info';
+      var title = document.createElement('strong');
+      title.textContent = periodLabel(r.period);
+      var value = document.createElement('span');
+      value.className = 'value';
+      value.textContent = num(r.value);
+      var detail = document.createElement('small');
+      detail.textContent = 'Read ' + name + (older ? ' · ' + kwh(round(r.value - older.value)) + ' used' : '');
+      info.appendChild(title);
+      info.appendChild(value);
+      info.appendChild(detail);
+      if (r.savedAt) {
+        var stamp = document.createElement('small');
+        stamp.textContent = 'Saved ' + dateTime(r.savedAt) + byLine(r.savedBy) +
+          (r.editedAt ? ' · Edited ' + dateTime(r.editedAt) + byLine(r.editedBy) : '');
+        info.appendChild(stamp);
+      }
+      if (sync) {
+        var received = document.createElement('small');
+        var isPending = sync.outbox.some(function (op) { return op.collection === 'readings' && op.id === r.period; });
+        received.textContent = !isPending && r.receivedAt ? 'Recorded on the PC ' + dateTime(r.receivedAt) : 'Waiting to reach the PC';
+        info.appendChild(received);
+      }
+
+      var tools = document.createElement('div');
+      tools.className = 'reading-tools';
+      tools.appendChild(toolButton('Open bill', 'Open bill for ' + periodLabel(r.period), function () {
+        selectPeriod(r.period);
+        location.hash = 'bill';
+      }));
+      tools.appendChild(toolButton('Edit', 'Edit reading for ' + periodLabel(r.period), function () {
+        selectReadingPeriod(r.period);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }));
+      tools.appendChild(toolButton('Delete', 'Delete reading for ' + periodLabel(r.period), function () {
+        if (!window.confirm('Delete the ' + name + ' reading' + (r.photo ? ' and its photo' : '') + '?')) return;
+        state.readings.splice(state.readings.indexOf(r), 1);
+        removeDoc('readings', r.period);
+        if (r.photo) deletePhoto(r.period).catch(function () { /* the record is gone, so the orphan is never shown */ });
+        renderReadings();
+        showPeriod();
+        if (periodOf(el.readMonth, el.readYear) === r.period) loadReadingForm(); else checkReading();
+      }));
+
+      li.appendChild(slot);
+      li.appendChild(info);
+      li.appendChild(tools);
+      el.readList.appendChild(li);
+    });
+  }
+
+  function route() {
+    var page = location.hash === '#readings' ? 'Readings' : location.hash === '#history' && sync ? 'History' : 'Bill';
+    ['Bill', 'Readings', 'History'].forEach(function (name) {
+      el['view' + name].hidden = name !== page;
+      if (name === page) el['nav' + name].setAttribute('aria-current', 'page');
+      else el['nav' + name].removeAttribute('aria-current');
+    });
+    if (page === 'History') loadHistory();
+    window.scrollTo(0, 0);
+  }
+
+  function nextPeriod(period) {
+    var parts = period.split('-');
+    var date = new Date(Number(parts[0]), Number(parts[1]), 1);
+    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = function () { reject(reader.error); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function dataUrlToBlob(url) {
+    var match = typeof url === 'string' && /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(url);
+    if (!match) return null;
+    try {
+      var binary = atob(match[2]);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: match[1] });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function exportData() {
+    var photos = {};
+    var missing = 0;
+    setStatus('Preparing backup...', el.backupStatus);
+    Promise.all(state.readings.filter(function (r) { return r.photo; }).map(function (r) {
+      return getPhoto(r.period).then(blobToDataUrl).then(function (url) {
+        photos[r.period] = url;
+      }).catch(function () { missing++; });
+    })).then(function () {
+      var backup = Object.assign({}, state, { photos: photos });
+      var blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = 'submeter-backup-' + todayISO() + '.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+      setStatus(missing ? 'Backup downloaded, but ' + missing + ' photo(s) could not be included.' : 'Backup downloaded.', el.backupStatus);
+    });
+  }
+
+  function replaceSyncedPhotos(oldReadings, blobs) {
+    oldReadings.forEach(function (r) {
+      if (r.photo && !blobs[r.period]) deletePhoto(r.period);
+    });
+    return Promise.all(Object.keys(blobs).map(function (period) {
+      return putPhoto(period, blobs[period]);
+    }));
+  }
+
+  function replaceSyncedRecords(collection, oldList, newList) {
+    var kept = newList.map(function (item) { return item.period; });
+    oldList.forEach(function (item) {
+      if (kept.indexOf(item.period) === -1) removeDoc(collection, item.period);
+    });
+    newList.forEach(function (item) { saveDoc(collection, item.period, item); });
+  }
+
+  function loadSync() {
+    try {
+      return JSON.parse(localStorage.getItem(SYNC_KEY));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function persistSync() {
+    try {
+      localStorage.setItem(SYNC_KEY, JSON.stringify({
+        device: sync.device, pin: sync.pin, lastRev: sync.lastRev, outbox: sync.outbox, sentOps: sync.sentOps
+      }));
+    } catch (e) { /* the queue still works until this page closes */ }
+  }
+
+  function enqueue(collection, id, action, data) {
+    sync.outbox.push({
+      opId: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12),
+      collection: collection, id: id, action: action, data: data,
+      device: sync.device, clientTime: new Date().toISOString()
+    });
+    persistSync();
+    showSyncState();
+    clearTimeout(sync.timer);
+    sync.timer = setTimeout(syncNow, 300);
+  }
+
+  function api(path, options, timeout) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, timeout || 10000);
+    var settings = Object.assign({ signal: controller.signal }, options);
+    settings.headers = Object.assign({ 'X-Sync-Pin': sync.pin }, settings.headers);
+    return fetch(path, settings).then(function (response) {
+      clearTimeout(timer);
+      if (!response.ok) {
+        var error = new Error('Server said ' + response.status);
+        error.status = response.status;
+        throw error;
+      }
+      return response;
+    }, function (error) {
+      clearTimeout(timer);
+      throw error;
+    });
+  }
+
+  function sendOp(op) {
+    var ready = Promise.resolve(op);
+    if (op.collection === 'photos' && op.action === 'set') {
+      // Sends the newest photo for that month, which may be newer than this queued change.
+      ready = localPhoto(op.id).then(function (blob) {
+        if (!blob) return null;
+        return blobToDataUrl(blob).then(function (url) {
+          return Object.assign({}, op, { photo: { type: blob.type || 'image/jpeg', data: url.split(',')[1] } });
+        });
+      });
+    }
+    return ready.then(function (body) {
+      if (!body) return null;
+      return api('/api/op', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }, 60000);
+    });
+  }
+
+  function sendOutbox() {
+    if (!sync.outbox.length) return Promise.resolve();
+    var op = sync.outbox[0];
+    var finish = function () {
+      sync.outbox = sync.outbox.filter(function (queued) { return queued.opId !== op.opId; });
+      sync.sentOps.push(op.opId);
+      sync.sentOps = sync.sentOps.slice(-200);
+      persistSync();
+      showSyncState();
+      return sendOutbox();
+    };
+    return sendOp(op).then(finish, function (error) {
+      // The server refused this change outright, so retrying can't help. Don't block the rest.
+      if (error.status === 400 || error.status === 413) {
+        showSync('The PC refused a change to ' + op.collection + ' for ' + op.id + ', so it was not recorded.');
+        return finish();
+      }
+      throw error;
+    });
+  }
+
+  function applyChange(change) {
+    var pending = sync.outbox.some(function (op) {
+      return op.collection === change.collection && op.id === change.id;
+    });
+    if (pending) return Promise.resolve();
+
+    if (change.collection === 'settings') {
+      if (!change.deleted && change.data) applyData(change.data);
+    } else if (change.collection === 'bills') {
+      state.bills = state.bills.filter(function (b) { return b.period !== change.id; });
+      if (!change.deleted && validBill(change.data)) state.bills.push(cleanBill(change.data));
+    } else if (change.collection === 'readings') {
+      state.readings = state.readings.filter(function (r) { return r.period !== change.id; });
+      if (!change.deleted && validReading(change.data)) state.readings.push(cleanReading(change.data));
+    } else if (change.collection === 'photos' && sync.sentOps.indexOf(change.opId) === -1) {
+      // Another device changed this photo. The new one downloads the next time it's shown.
+      return photoTx('readwrite', function (s) { return s.delete(change.id); });
+    }
+    return Promise.resolve();
+  }
+
+  function pullChanges() {
+    return api('/api/changes?since=' + sync.lastRev).then(function (response) {
+      return response.json();
+    }).then(function (result) {
+      return result.changes.reduce(function (chain, change) {
+        return chain.then(function () { return applyChange(change); });
+      }, Promise.resolve()).then(function () {
+        sync.lastRev = result.rev;
+        persistSync();
+        if (result.changes.length) {
+          persist();
+          if (started) refresh();
+        }
+        checkAppVersion(result.appVersion);
+      });
+    });
+  }
+
+  // The page is cached so it opens while the PC is off, so newer versions need fetching on purpose.
+  function checkAppVersion(version) {
+    if (version === APP_VERSION) {
+      try { sessionStorage.removeItem('submeter-updating'); } catch (e) { /* nothing to clear */ }
+      return;
+    }
+    try {
+      if (sessionStorage.getItem('submeter-updating')) return;
+      sessionStorage.setItem('submeter-updating', '1');
+    } catch (e) {
+      return;
+    }
+    fetch(location.pathname, { cache: 'reload' }).then(function () {
+      if (!billDirty && !readDirty && !pendingPhoto) location.reload();
+    }).catch(function () { /* tries again next time */ });
+  }
+
+  function syncNow() {
+    if (!sync || sync.paused) return Promise.resolve();
+    if (sync.running) {
+      sync.again = true;
+      return Promise.resolve();
+    }
+    sync.running = true;
+    return sendOutbox().then(pullChanges).then(function () {
+      sync.reachable = true;
+      sync.lastSynced = new Date().toISOString();
+    }, function (error) {
+      sync.reachable = false;
+      if (error.status === 401) {
+        sync.paused = true;
+        sync.pin = '';
+        persistSync();
+        showPairing('The sync code has changed. Enter the code shown on the PC. Nothing saved on this device was lost.');
+      }
+    }).then(function () {
+      sync.running = false;
+      showSyncState();
+      if (sync.again) {
+        sync.again = false;
+        syncNow();
+      }
+    });
+  }
+
+  function showSyncState() {
+    var waiting = sync.outbox.length;
+    el.syncState.textContent = sync.reachable === false
+      ? 'PC not reachable' + (waiting ? ', ' + waiting + ' change(s) saved here and waiting' : ', showing what is saved here')
+      : waiting
+        ? waiting + ' change(s) uploading'
+        : sync.reachable ? 'All saved on the PC' : 'Connecting...';
+  }
+
+  function showSync(text) {
+    el.syncStatus.hidden = !text;
+    el.syncStatus.textContent = text || '';
+  }
+
+  function showPairing(message) {
+    el.viewLogin.hidden = false;
+    el.app.hidden = true;
+    el.tabs.hidden = true;
+    el.account.hidden = true;
+    el.loginMessage.hidden = !message;
+    el.loginMessage.textContent = message || '';
+    el.loginDevice.value = (sync && sync.device) || '';
+    el.loginPin.value = '';
+  }
+
+  function submitPairing(event) {
+    event.preventDefault();
+    var device = el.loginDevice.value.trim();
+    var pin = el.loginPin.value.trim();
+    if (!device || !pin) {
+      el.loginMessage.hidden = false;
+      el.loginMessage.textContent = 'Enter both a device name and the sync code.';
+      return;
+    }
+    var saved = sync || {};
+    sync = {
+      device: device, pin: pin, lastRev: saved.lastRev || 0,
+      outbox: saved.outbox || [], sentOps: saved.sentOps || []
+    };
+    el.loginBtn.disabled = true;
+    api('/api/changes?since=0').then(function () {
+      persistSync();
+      el.loginBtn.disabled = false;
+      beginSync();
+    }, function (error) {
+      el.loginBtn.disabled = false;
+      el.loginMessage.hidden = false;
+      el.loginMessage.textContent = error.status === 401
+        ? 'That sync code is not correct. It is shown in the server window on the PC.'
+        : 'Could not reach the PC. Check that the server is running and this device is on the same Wi-Fi.';
+    });
+  }
+
+  function beginSync() {
+    el.accountName.textContent = 'This device: ' + sync.device;
+    el.account.hidden = false;
+    el.navHistory.hidden = false;
+    el.backupHint.textContent = 'Each device keeps its own copy and syncs it to the database on the PC. The PC also makes a daily backup by itself.';
+    if (started) {
+      el.viewLogin.hidden = true;
+      el.tabs.hidden = false;
+      el.app.hidden = false;
+      renderReadings();
+    } else {
+      start();
+    }
+    showSyncState();
+    syncNow();
+    if (!beginSync.scheduled) {
+      beginSync.scheduled = true;
+      setInterval(syncNow, 30000);
+      window.addEventListener('online', syncNow);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) syncNow();
+      });
+    }
+  }
+
+  function historyText(entry) {
+    var data = entry.data || {};
+    var month = /^\d{4}-\d{2}$/.test(entry.doc_id) ? periodLabel(entry.doc_id) : '';
+    var removed = entry.action === 'delete';
+    if (entry.collection === 'readings') {
+      return removed ? 'Deleted the ' + month + ' reading' : 'Saved the ' + month + ' reading: ' + num(Number(data.value));
+    }
+    if (entry.collection === 'bills') {
+      return removed ? 'Deleted the ' + month + ' bill' : 'Saved the ' + month + ' bill: ' + peso(Number(data.bill)) + (data.paid ? ', marked paid' : '');
+    }
+    if (entry.collection === 'photos') return (removed ? 'Removed' : 'Added') + ' the ' + month + ' photo';
+    return 'Changed the rate or names';
+  }
+
+  function loadHistory() {
+    if (!sync) return;
+    el.historyLogEmpty.hidden = false;
+    el.historyLogEmpty.textContent = 'Loading...';
+    api('/api/history').then(function (response) {
+      return response.json();
+    }).then(function (result) {
+      el.historyLog.textContent = '';
+      el.historyLogEmpty.hidden = result.entries.length > 0;
+      el.historyLogEmpty.textContent = 'No changes have reached the PC yet.';
+      result.entries.forEach(function (entry) {
+        var li = document.createElement('li');
+        li.className = 'log-entry';
+        var what = document.createElement('strong');
+        what.textContent = historyText(entry);
+        var when = document.createElement('small');
+        when.textContent = dateTime(entry.received_at) + ' · ' + entry.device;
+        li.appendChild(what);
+        li.appendChild(when);
+        if (entry.photo_id) {
+          var view = document.createElement('button');
+          view.type = 'button';
+          view.className = 'link-button';
+          view.textContent = 'View this photo';
+          view.addEventListener('click', function () {
+            api('/api/photo-versions/' + entry.photo_id, {}, 60000).then(function (response) {
+              return response.blob();
+            }).then(function (blob) {
+              showPhoto(blob, historyText(entry) + ', ' + dateTime(entry.received_at), 'submeter-' + entry.doc_id + '-' + entry.photo_id + '.jpg');
+            }).catch(function () {
+              window.alert('This photo could not be opened. Check that the PC is reachable.');
+            });
+          });
+          li.appendChild(view);
+        }
+        el.historyLog.appendChild(li);
+      });
+    }).catch(function () {
+      el.historyLog.textContent = '';
+      el.historyLogEmpty.hidden = false;
+      el.historyLogEmpty.textContent = 'The history is kept on the PC, and the PC is not reachable right now.';
+    });
+  }
+
+  // Applies a change from another device without wiping what's being typed here.
+  function refresh() {
+    setYears();
+    renderHistory();
+    renderReadings();
+    if (billDirty) {
+      applyRecords(selectedPeriod(), findBill(selectedPeriod()));
+      render();
+    } else {
+      if (!showingSaved) el.rate.value = state.rate;
+      showPeriod();
+    }
+    if (!readDirty && !pendingPhoto && !removePhoto) loadReadingForm(); else checkReading();
+    if (document.activeElement !== el.mainName) el.mainName.value = state.mainName;
+    if (document.activeElement !== el.subName) el.subName.value = state.subName;
+  }
+
+  function start() {
+    started = true;
+    var thisMonth = todayISO().slice(0, 7);
+    var latest = readingsNewestFirst()[0];
+    // A bill arrives after the 26th, so open the newest reading that has no bill yet.
+    var billPeriod = latest && !findBill(latest.period) ? latest.period : thisMonth;
+    var readPeriod = latest && latest.period >= thisMonth ? nextPeriod(latest.period) : thisMonth;
+    setYears();
+    setYears(Number(billPeriod.slice(0, 4)));
+    setYears(Number(readPeriod.slice(0, 4)));
+    el.year.value = billPeriod.slice(0, 4);
+    el.month.value = String(Number(billPeriod.slice(5)) - 1);
+    el.readYear.value = readPeriod.slice(0, 4);
+    el.readMonth.value = String(Number(readPeriod.slice(5)) - 1);
+    el.rate.value = state.rate;
+    el.mainName.value = state.mainName;
+    el.subName.value = state.subName;
+
+    el.viewLogin.hidden = true;
+    el.tabs.hidden = false;
+    el.app.hidden = false;
+    renderHistory();
+    renderReadings();
+    showPeriod();
+    loadReadingForm();
+    route();
+  }
+
+  function importData(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(reader.result); } catch (e) { data = null; }
+      if (!data || !Array.isArray(data.bills)) {
+        setStatus('That file is not a valid backup.', el.backupStatus);
+        return;
+      }
+      if (!window.confirm(sync
+        ? 'Replace the bills, readings and photos for everyone with this backup?'
+        : 'Replace the bills, readings and photos on this device with this backup?')) return;
+      var oldBills = state.bills;
+      var oldReadings = state.readings;
+      state.bills = [];
+      state.readings = [];
+      applyData(data);
+
+      var blobs = {};
+      state.readings.forEach(function (r) {
+        var blob = data.photos ? dataUrlToBlob(data.photos[r.period]) : null;
+        if (blob) blobs[r.period] = blob;
+        r.photo = !!blob;
+      });
+
+      // Held here because a sync can replace state while the photos are being stored.
+      var newBills = state.bills;
+      var newReadings = state.readings;
+      var photosFailed = false;
+      var storePhotos = sync ? replaceSyncedPhotos(oldReadings, blobs) : photoTx('readwrite', function (store) {
+        store.clear();
+        Object.keys(blobs).forEach(function (period) { store.put(blobs[period], period); });
+      });
+      storePhotos.catch(function () {
+        photosFailed = true;
+        newReadings.forEach(function (r) { r.photo = false; });
+      }).then(function () {
+        state.bills = newBills;
+        state.readings = newReadings;
+        persist();
+        if (sync) {
+          replaceSyncedRecords('bills', oldBills, newBills);
+          replaceSyncedRecords('readings', oldReadings, newReadings);
+          saveSettings();
+        }
+        el.mainName.value = state.mainName;
+        el.subName.value = state.subName;
+        el.rate.value = state.rate;
+        setYears();
+        showingSaved = true;
+        renderHistory();
+        renderReadings();
+        showPeriod();
+        loadReadingForm();
+        var summary = state.bills.length + ' bill(s), ' + state.readings.length + ' reading(s)';
+        setStatus(photosFailed ? 'Restored ' + summary + ', but the photos could not be stored.' : 'Restored ' + summary + ', ' + Object.keys(blobs).length + ' photo(s).', el.backupStatus);
+      });
+    };
+    reader.onerror = function () { setStatus('Could not read that file.', el.backupStatus); };
+    reader.readAsText(file);
+  }
+
+  function init() {
+    MONTHS.forEach(function (name, i) {
+      var o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = name;
+      el.month.appendChild(o);
+      el.readMonth.appendChild(o.cloneNode(true));
+    });
+
+    el.form.addEventListener('submit', function (e) { e.preventDefault(); });
+    el.form.addEventListener('input', function (e) {
+      if (e.target !== el.month && e.target !== el.year) {
+        billDirty = true;
+        render();
+      }
+    });
+    el.month.addEventListener('change', showPeriod);
+    el.year.addEventListener('change', showPeriod);
+    el.save.addEventListener('click', saveBill);
+    el.copy.addEventListener('click', copyMessage);
+    el.exportBtn.addEventListener('click', exportData);
+    el.importBtn.addEventListener('click', function () { el.importFile.click(); });
+    el.importFile.addEventListener('change', function () {
+      if (el.importFile.files[0]) importData(el.importFile.files[0]);
+      el.importFile.value = '';
+    });
+
+    [['mainName', 'Main house'], ['subName', 'Submeter']].forEach(function (pair) {
+      el[pair[0]].addEventListener('input', function () {
+        state[pair[0]] = el[pair[0]].value.trim() || pair[1];
+        saveSettings();
+        render();
+        renderHistory();
+      });
+    });
+
+    el.readForm.addEventListener('submit', function (e) { e.preventDefault(); });
+    [el.readDate, el.readValue].forEach(function (input) {
+      input.addEventListener('input', function () {
+        readDirty = true;
+        checkReading();
+      });
+    });
+    el.readMonth.addEventListener('change', loadReadingForm);
+    el.readYear.addEventListener('change', loadReadingForm);
+    el.readSave.addEventListener('click', saveReading);
+    el.photoBtn.addEventListener('click', function () { el.photoFile.click(); });
+    el.photoRemove.addEventListener('click', function () {
+      pendingPhoto = null;
+      removePhoto = true;
+      setPreview(null);
+    });
+    el.photoFile.addEventListener('change', function () {
+      var file = el.photoFile.files[0];
+      el.photoFile.value = '';
+      if (!file) return;
+      photoBusy = true;
+      checkReading();
+      shrinkPhoto(file).then(function (blob) {
+        pendingPhoto = blob;
+        removePhoto = false;
+        setPreview(blob);
+      }).catch(function () {
+        setStatus('That photo could not be opened. Try a JPG or PNG photo.', el.readStatus);
+      }).then(function () {
+        photoBusy = false;
+        checkReading();
+      });
+    });
+    el.photoClose.addEventListener('click', function () { el.photoDialog.close(); });
+    window.addEventListener('hashchange', route);
+
+    // With the app open in two tabs, each picks up what the other saved instead of overwriting it.
+    window.addEventListener('storage', function (event) {
+      if (event.key === STORAGE_KEY && started) {
+        loadState();
+        refresh();
+      } else if (event.key === SYNC_KEY && sync) {
+        var latest = loadSync();
+        if (latest) {
+          sync.outbox = latest.outbox || [];
+          sync.sentOps = latest.sentOps || [];
+          sync.lastRev = latest.lastRev || 0;
+          showSyncState();
+        }
+      }
+    });
+
+    // Everything saved on this device shows right away, whether or not the PC is on.
+    loadState();
+    if (SYNC_SERVER) {
+      el.loginForm.addEventListener('submit', submitPairing);
+      el.syncBtn.addEventListener('click', syncNow);
+      var saved = loadSync();
+      if (saved && saved.device && saved.pin) {
+        sync = {
+          device: saved.device, pin: saved.pin, lastRev: saved.lastRev || 0,
+          outbox: saved.outbox || [], sentOps: saved.sentOps || []
+        };
+        beginSync();
+      } else {
+        sync = saved;
+        showPairing('');
+      }
+    } else {
+      start();
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
